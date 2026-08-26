@@ -1,0 +1,96 @@
+# ==========================
+# Dependencies
+# ==========================
+node_modules/
+**/node_modules/
+
+# ==========================
+# Environment Variables
+# ==========================
+.env
+.env.*
+!.env.example
+
+# ==========================
+# Logs
+# ==========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ==========================
+# Build Output
+# ==========================
+dist/
+build/
+coverage/
+**/dist/
+**/build/
+**/coverage/
+
+# ==========================
+# Cache
+# ==========================
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+.turbo/
+
+# ==========================
+# IDE & Editor
+# ==========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*.DS_Store
+
+# ==========================
+# OS Files
+# ==========================
+Thumbs.db
+.DS_Store
+
+# ==========================
+# Package Manager
+# ==========================
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Uncomment if using npm workspaces and you WANT to ignore lock file
+# (Otherwise, it's recommended to commit ONE lock file)
+# package-lock.json
+
+# ==========================
+# Docker
+# ==========================
+docker-compose.override.yml
+
+# ==========================
+# Temporary Files
+# ==========================
+tmp/
+temp/
+*.tmp
+
+# ==========================
+# Runtime Files
+# ==========================
+pids/
+*.pid
+*.seed
+
+# ==========================
+# Testing
+# ==========================
+.nyc_output/
+
+# ==========================
+# Misc
+# ==========================
+*.tgz
