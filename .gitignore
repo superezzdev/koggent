@@ -12,6 +12,17 @@ node_modules/
 !.env.example
 
 # ==========================
+# Firebase / Secrets
+# ==========================
+**/serviceAccountKey*.json
+!**/serviceAccountKey.example.json
+!**/serviceAccountKey.sample.json
+**/*.pem
+**/*.key
+**/*.crt
+**/*firebase*.json
+
+# ==========================
 # Logs
 # ==========================
 logs/
