@@ -15,7 +15,7 @@ const conversationSlice = createSlice({
     },
     removeConversation: (state, action) => {
       state.conversations = state.conversations.filter(
-        (conversation) => conversation.id !== action.payload
+        (conversation) => (conversation._id || conversation.id) !== action.payload
       );
     },
     setSelectedConversation: (state, action) => {
