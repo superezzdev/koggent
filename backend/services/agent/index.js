@@ -1,9 +1,7 @@
+import "dotenv/config";
 import express from "express";
-import dotenv from "dotenv";
-import {connectDb} from "./config/db.js";
-import { router } from "./graph/router.js";
-
-dotenv.config();
+import connectDb from "./config/db.js";
+import router from "./routes/agent.route.js";
 
 const port = process.env.PORT;
 

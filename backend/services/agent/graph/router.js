@@ -1,7 +1,7 @@
 import { getModel } from "../config/llmModels.js";
 
 export const router = async (state) => {
-  const llm = getModel("router");
+  const llm =await getModel("router");
 
   const prompt = `You are an agent router.
 
