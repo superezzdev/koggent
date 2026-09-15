@@ -14,7 +14,7 @@ function App() {
     };
 
     getUser();
-  }, []);
+  }, [dispatch]);
 
   return (
     <>

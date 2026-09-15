@@ -1,8 +1,8 @@
 import { getAuth } from "firebase-admin/auth";
 import { app } from "../config/firebase.js";
 import User from "../models/user.model.js";
-import { createConnection } from "mongoose";
 import redis from "../../../shared/redis/redis.js";
+import crypto from "crypto";
 
 export const login = async (req, res) => {
   try {
@@ -28,6 +28,7 @@ export const login = async (req, res) => {
     await redis.set(
       `session-${sessionId}`,
       JSON.stringify({
+        _id: user._id,
         userId: user._id,
         name: user.name,
         email: user.email,
@@ -54,11 +55,19 @@ export const login = async (req, res) => {
 
 export const logOut = async (req, res) => {
   try {
-    const sessionId = req.cookies?.session;
+    const sessionId =
+      req.cookies?.session ||
+      req.headers.cookie?.match(/(?:^|;\s*)session=([^;]+)/)?.[1];
 
-    await redis.del(`session-${sessionId}`);
+    if (sessionId) {
+      await redis.del(`session-${sessionId}`);
+    }
 
-    res.clearCookie("session");
+    res.clearCookie("session", {
+      httpOnly: true,
+      secure: false,
+      sameSite: "strict",
+    });
 
     return res.status(200).json({
       message: "logout successfully",
