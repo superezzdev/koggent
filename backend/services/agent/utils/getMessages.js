@@ -6,9 +6,9 @@ export const getMessages = async (conversationId) => {
       `${process.env.CHAT_SERVICE}/get-messages/${conversationId}`,
     );
 
-    return data;
+    return Array.isArray(data) ? data : [];
   } catch (error) {
-    console.log(error);
-    return null;
+    console.log("getMessages error:", error.message);
+    return [];
   }
 };

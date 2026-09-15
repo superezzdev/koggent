@@ -1,15 +1,35 @@
-import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages";
+import {
+  AIMessage,
+  HumanMessage,
+  SystemMessage,
+} from "@langchain/core/messages";
 import { getModel } from "../config/llmModels.js";
 import { getMemory } from "../config/memory.js";
 
 export const chatAgent = async (state) => {
-  const llm = await getModel("chat");
+  const llm = await getModel(state.agent || "chat");
 
-const history = await getMemory(state.conversationId);
+  const history = (await getMemory(state.conversationId)) || [];
 
+  const searchContext = state.searchResults
+    ? `
+Web Search Results:
+
+${JSON.stringify(state.searchResults)}
+
+Answer the user using only the above search results.
+`
+    : "";
 
   const systemPrompt = `
 You are koggent ai, an intelligent AI assistant.
+
+${searchContext}
+
+If searchContext exists:
+
+- Use search results to answer.
+- Do not mention internal tools.
 
 Rules:
 
@@ -28,22 +48,21 @@ Formatting:
 - Never generate large walls of text.
 `;
 
+  const messages = [new SystemMessage(systemPrompt)];
 
-const messages = [new SystemMessage(systemPrompt)];
+  history.forEach((msg) => {
+    if (msg.role == "user") {
+      messages.push(new HumanMessage(msg.content));
+    }
 
-history.forEach((msg) => {
-  if (msg.role == "user") {
-    messages.push(new HumanMessage(msg.content));
-  }
+    if (msg.role == "assistant") {
+      messages.push(new AIMessage(msg.content));
+    }
+  });
 
-  if (msg.role == "assistant") {
-    messages.push(new AIMessage(msg.content));
-  }
-});
+  messages.push(new HumanMessage(state.prompt));
 
-messages.push(new HumanMessage(state.prompt));
-
-console.log(messages);
+  console.log(messages);
 
   const response = await llm.invoke(messages);
 

@@ -19,8 +19,10 @@ const protect = async (req, res, next) => {
     }
 
     req.user = JSON.parse(session);
-
-    console.log(req.user);
+    if (req.user) {
+      if (!req.user._id && req.user.userId) req.user._id = req.user.userId;
+      if (!req.user.userId && req.user._id) req.user.userId = req.user._id;
+    }
 
     next();
   } catch (error) {

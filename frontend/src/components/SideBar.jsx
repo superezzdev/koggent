@@ -31,8 +31,10 @@ function SideBar() {
   );
   const { userData } = useSelector((state) => state.user);
 
+  const userIdentifier = userData?._id || userData?.userId;
+
   useEffect(() => {
-    if (!userData?._id) return;
+    if (!userIdentifier) return;
     const getConv = async () => {
       const data = await getConversations();
       if (data) {
@@ -41,7 +43,7 @@ function SideBar() {
     };
 
     getConv();
-  }, [userData?._id, dispatch]);
+  }, [userIdentifier, dispatch]);
 
   const handleLogout = async () => {
     await logOut();
@@ -56,6 +58,7 @@ function SideBar() {
     if (data) {
       dispatch(addConversation(data));
       dispatch(setSelectedConversation(data));
+      dispatch(setMessages([]));
     }
   };
 
@@ -144,11 +147,11 @@ if (collapsed) {
     <div
       className="fixed lg:static inset-y-0 left-0 z-50
       w-[270px] h-screen shrink-0
-      bg-[#0d0f14] border-r border-white/0.06
+      bg-[#0d0f14] border-r border-white/[0.06]
     "
     >
       <div className="flex flex-col h-full">
-        <div className="flex items-center gap-2.5 px-4 py-4 border-b border-white/0.06">
+        <div className="flex items-center gap-2.5 px-4 py-4 border-b border-white/[0.06]">
           <div
             className="hidden lg:flex items-center justify-center w-7 h-7 rounded-lg text-slate-500
               hover:text-slate-200 hover:bg-white/0.05 transition-colors duration-150
@@ -173,7 +176,7 @@ if (collapsed) {
             className="flex items-center justify-center w-7 h-7 rounded-lg text-slate-500
               hover:text-slate-200 hover:bg-white/0.05 transition-colors duration-150
               bg-transparent border-none cursor-pointer"
-            onClick={() => handleCreateConversation()}
+            onClick={handleCreateConversation}
           >
             <PenSquare size={14} />
           </button>
@@ -184,7 +187,7 @@ if (collapsed) {
             className="w-full flex items-center justify-center gap-2 text-sm font-medium text-white
       bg-linear-to-br from-indigo-500 to-violet-700 rounded-xl py-[10px] border-none cursor-pointer
       hover:opacity-90 transition-opacity duration-150"
-            onClick={() => handleCreateConversation()}
+            onClick={handleCreateConversation}
           >
             <Plus size={15} />
             New Chat
@@ -289,15 +292,13 @@ if (collapsed) {
               </div>
             </div>
           ) : (
-          
-              <button
-                className="w-full flex items-center justify-center gap-2 text-sm font-medium
+            <button
+              className="w-full flex items-center justify-center gap-2 text-sm font-medium
     text-slate-200 bg-white/[0.05] border border-white/[0.08] rounded-xl py-[11px]
     cursor-pointer hover:bg-white/[0.08] transition-colors duration-150"
-              >
-                Login
-              </button>
-       
+            >
+              Login
+            </button>
           )}
         </div>
       </div>

@@ -4,15 +4,21 @@ import { getMessages } from "../utils/getMessages.js";
 export const getMemory = async (conversationId) => {
   const key = `messages-${conversationId}`;
 
-  const cached = await redis.get(key);
-
-  if (cached) {
-    return JSON.parse(cached);
+  try {
+    const cached = await redis.get(key);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (error) {
+    console.error("Failed to parse cached memory:", error.message);
   }
 
-  const messages = await getMessages(conversationId);
+  const messages = (await getMessages(conversationId)) || [];
 
-  await redis.set(key, JSON.stringify(messages), "EX", 24 * 60 * 60);
+  if (Array.isArray(messages) && messages.length > 0) {
+    await redis.set(key, JSON.stringify(messages), "EX", 24 * 60 * 60);
+  }
 
   return messages;
 };
