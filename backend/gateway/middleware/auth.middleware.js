@@ -2,7 +2,9 @@ import redis from "../../shared/redis/redis.js";
 
 const protect = async (req, res, next) => {
   try {
-    const sessionId = req.cookies?.session;
+    const sessionId =
+      req.cookies?.session ||
+      req.headers.cookie?.match(/(?:^|;\s*)session=([^;]+)/)?.[1];
 
     if (!sessionId) {
       return res.status(401).json({

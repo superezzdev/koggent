@@ -19,7 +19,7 @@ import {
 import { createConversation } from "../features/createConversation";
 import logOut from "../features/logOut";
 import { setUserdata } from "../redux/userSlice";
-import { setMessages } from "../redux/messageSlice";
+import { setMessages, setArtifacts } from "../redux/messageSlice";
 
 function SideBar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -51,6 +51,7 @@ function SideBar() {
     dispatch(setSelectedConversation(null));
     dispatch(setConversations([]));
     dispatch(setMessages([]));
+    dispatch(setArtifacts([]));
   };
 
   const handleCreateConversation = async () => {
