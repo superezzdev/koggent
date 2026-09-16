@@ -2,9 +2,11 @@ import { getModel } from "../config/llmModels.js";
 
 export const router = async (state) => {
   if (state.agent && state.agent !== "auto") {
+    const normalized =
+      state.agent === "image" ? "vision" : state.agent.toLowerCase();
     return {
       ...state,
-      agent: state.agent,
+      agent: normalized,
     };
   }
 

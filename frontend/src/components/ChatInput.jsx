@@ -15,7 +15,7 @@ import { useState } from "react";
 import sendMessage from "../features/sendMessage";
 import { createConversation } from "../features/createConversation";
 import { useDispatch, useSelector } from "react-redux";
-import { addMessages } from "../redux/messageSlice";
+import { addMessage, setArtifacts } from "../redux/messageSlice";
 import {
   addConversation,
   setSelectedConversation,
@@ -37,7 +37,7 @@ function ChatInput() {
 
     setLoading(true);
     setValue("");
-    dispatch(addMessages([{ role: "user", content: trimmed }]));
+    dispatch(addMessage({ role: "user", content: trimmed }));
 
     try {
       let currentConv = selectedConversation;
@@ -74,37 +74,32 @@ function ChatInput() {
       };
 
       const data = await sendMessage(payload);
+      dispatch(setArtifacts(data?.artifacts || []));
       if (data?.answer) {
         dispatch(
-          addMessages([
-            {
-              role: "assistant",
-              content: data.answer,
-              images: data.images || [],
-            },
-          ]),
+          addMessage({
+            role: "assistant",
+            content: data.answer,
+            images: data.images || [],
+          }),
         );
       } else {
         dispatch(
-          addMessages([
-            {
-              role: "assistant",
-              content:
-                data?.message ||
-                "Sorry, I encountered an issue generating a response.",
-            },
-          ]),
+          addMessage({
+            role: "assistant",
+            content:
+              data?.message ||
+              "Sorry, I encountered an issue generating a response.",
+          }),
         );
       }
     } catch (err) {
       console.error("Failed to send message:", err);
       dispatch(
-        addMessages([
-          {
-            role: "assistant",
-            content: "Sorry, I encountered an error processing your request.",
-          },
-        ]),
+        addMessage({
+          role: "assistant",
+          content: "Sorry, I encountered an error processing your request.",
+        }),
       );
     } finally {
       setLoading(false);

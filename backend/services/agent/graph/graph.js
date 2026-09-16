@@ -35,6 +35,7 @@ workflow.addConditionalEdges(
       case "ppt":
         return "ppt";
       case "vision":
+      case "image":
         return "vision";
       default:
         return "chat";
