@@ -1,4 +1,8 @@
 import { getModel } from "../config/llmModels.js";
+import {
+  getRelevantImagesForPrompt,
+  replaceBrokenImages,
+} from "../utils/unsplash.js";
 
 // -----------------------------------------------------------------------
 // Advanced tool detection — only injected into the prompt if the user
@@ -93,9 +97,8 @@ If the latter, redo it.
      transform/opacity based, GPU-friendly, no layout-thrashing animations.
 
 5. IMAGERY
-   - Always source real imagery from the Unsplash Source API (https://source.unsplash.com/
-     or the Unsplash API if a key is available) — never gray boxes or lorem-picsum unless
-     explicitly told to use placeholders.
+   - Always source real imagery from the provided Unsplash image list or valid Unsplash CDN URLs (https://images.unsplash.com/...).
+   - NEVER use "https://source.unsplash.com/" (deprecated/offline) or generic placeholder services.
    - Images should be treated as design elements: consider duotone overlays, grain,
      subtle parallax, or masked/clipped shapes rather than plain rectangles.
 
@@ -133,7 +136,30 @@ ${state.prompt}
     rawIntent.includes("CODE_GENERATION") || rawIntent.includes("GENERATE");
 
   if (isCodeGeneration) {
-    const tools = detectAdvancedTools(state.prompt);
+    const [tools, fetchedImages] = await Promise.all([
+      detectAdvancedTools(state.prompt),
+      getRelevantImagesForPrompt(state.prompt, 8),
+    ]);
+
+    const imagesBlock =
+      fetchedImages && fetchedImages.length
+        ? `
+REAL IMAGES AVAILABLE (Unsplash API)
+===========================================
+You MUST use these verified, working Unsplash image URLs in your <img> tags (src attribute) and CSS (e.g. background-image: url('...')).
+Distribute them across suitable sections (Hero, Features, Services, Team, Cards, etc.):
+
+${fetchedImages
+  .map(
+    (img, i) =>
+      `- [Image ${i + 1}: "${img.title}"]\n  URL: ${img.url}\n  Alt: ${img.title}`
+  )
+  .join("\n\n")}
+
+CRITICAL: NEVER use "https://source.unsplash.com/". ONLY use the exact URLs listed above.
+        `.trim()
+        : "";
+
     const toolsBlock = tools.length
       ? `
 ADVANCED TOOLING REQUESTED
@@ -169,6 +195,8 @@ requested.
 ${DESIGN_SYSTEM_BRIEF}
 
 ${toolsBlock}
+
+${imagesBlock}
 
 STRUCTURE RULES
 - Single page unless user asks otherwise.
@@ -242,6 +270,8 @@ ${state.prompt}
       };
     }
 
+    const sanitizedFiles = replaceBrokenImages(data.files, fetchedImages);
+
     return {
       ...state,
       aiResponse: "Code Generated Successfully.",
@@ -249,17 +279,18 @@ ${state.prompt}
         {
           id: Date.now(),
           type: "Project",
-          files: data.files,
+          files: sanitizedFiles,
           title: state.prompt,
         },
       ],
+      images: fetchedImages.map((img) => img.url),
     };
   }
 
   const res = await llm.invoke(`
 The user's request is:
 
-${intent}
+${rawIntent}
 
 Return Markdown only.
 
