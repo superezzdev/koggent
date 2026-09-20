@@ -1,4 +1,5 @@
 import { searchTool } from "../config/tavily.js";
+import { searchUnsplashPhotos } from "../utils/unsplash.js";
 
 export const searchAgent = async (state) => {
   try {
@@ -6,12 +7,19 @@ export const searchAgent = async (state) => {
       query: state.prompt,
     });
 
-    console.log(results);
+    let images = results.images;
+    if (!images || !images.length) {
+      const unsplashPhotos = await searchUnsplashPhotos({
+        query: state.prompt,
+        perPage: 4,
+      });
+      images = unsplashPhotos.map((p) => p.url);
+    }
 
     return {
       ...state,
       searchResults: results,
-      images: results.images,
+      images,
     };
   } catch (error) {
     return {
