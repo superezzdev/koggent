@@ -294,7 +294,6 @@ function MessageBubble({ role, content, images = [] }) {
                       CODE CONTENT
                   ================== */}
 
-
                   <SyntaxHighlighter
                     language={language}
                     style={oneDark}
@@ -310,6 +309,23 @@ function MessageBubble({ role, content, images = [] }) {
                     {value}
                   </SyntaxHighlighter>
                 </div>
+              );
+            },
+
+            img: ({ src, alt }) => {
+              if (!src) return null;
+
+              return (
+                <img
+                  src={src}
+                  alt={alt || "Generated visual"}
+                  onClick={() => setLightBox(src)}
+                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                  className="max-w-md w-full max-h-[380px] rounded-xl object-cover border border-white/10 cursor-zoom-in hover:opacity-95 my-2 shadow-lg transition"
+                />
               );
             },
           }}
