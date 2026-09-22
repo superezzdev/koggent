@@ -2,8 +2,8 @@ import { getModel } from "../config/llmModels.js";
 
 export const router = async (state) => {
   if (state.agent && state.agent !== "auto") {
-    const normalized =
-      state.agent === "image" ? "vision" : state.agent.toLowerCase();
+    const rawAgent = String(state.agent).trim().toLowerCase();
+    const normalized = rawAgent === "image" ? "vision" : rawAgent;
     return {
       ...state,
       agent: normalized,
@@ -72,9 +72,13 @@ ${state.prompt}
 `;
 
   const response = await llm.invoke(prompt);
+  const raw = (response?.content || "").trim().toLowerCase();
+  const match = raw.match(/\b(chat|search|coding|pdf|ppt|vision|image)\b/);
+  let cleanAgent = match ? match[1] : "chat";
+  if (cleanAgent === "image") cleanAgent = "vision";
 
   return {
     ...state,
-    agent: response.content.trim().toLowerCase(),
+    agent: cleanAgent,
   };
 };

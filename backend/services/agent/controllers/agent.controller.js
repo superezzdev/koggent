@@ -3,18 +3,25 @@ import { graph } from "../graph/graph.js";
 import { addMessage } from "../config/memory.js";
 import redis from "../../../shared/redis/redis.js";
 
-
 export const agent = async (req, res) => {
   try {
     const { prompt, conversationId, agent } = req.body;
-    const conversation = conversationId;
-    await redis.del(`messages-${conversationId}`);
- 
-    await axios.post(`${process.env.CHAT_SERVICE}/save-message`, {
-      conversationId,
-      role: "user",
-      content: prompt,
-    });
+
+    try {
+      await redis.del(`messages-${conversationId}`);
+    } catch (e) {
+      console.warn("Redis memory cache invalidation error:", e.message);
+    }
+
+    try {
+      await axios.post(`${process.env.CHAT_SERVICE}/save-message`, {
+        conversationId,
+        role: "user",
+        content: prompt,
+      });
+    } catch (saveUserErr) {
+      console.warn("Failed to persist user message in chat service:", saveUserErr.message);
+    }
 
     const result = await graph.invoke({
       prompt,
@@ -23,16 +30,21 @@ export const agent = async (req, res) => {
     });
 
     const response = result.aiResponse;
-        await addMessage(conversationId, "user", prompt);
 
+    await addMessage(conversationId, "user", prompt);
     await addMessage(conversationId, "assistant", response);
-    await axios.post(`${process.env.CHAT_SERVICE}/save-message`, {
-      conversationId,
-      role: "assistant",
-      content: result.aiResponse,
-      images: result.images || [],
-      artifacts: result.artifacts || [],
-    });
+
+    try {
+      await axios.post(`${process.env.CHAT_SERVICE}/save-message`, {
+        conversationId,
+        role: "assistant",
+        content: result.aiResponse,
+        images: result.images || [],
+        artifacts: result.artifacts || [],
+      });
+    } catch (saveAssistantErr) {
+      console.warn("Failed to persist assistant response in chat service:", saveAssistantErr.message);
+    }
 
     return res.status(200).json({
       answer: result.aiResponse,
@@ -40,8 +52,9 @@ export const agent = async (req, res) => {
       artifacts: result.artifacts,
     });
   } catch (error) {
+    console.error("agent controller error:", error);
     return res.status(500).json({
-      message: `agent error ${error}`,
+      message: `agent error ${error.message || error}`,
     });
   }
 };
