@@ -50,6 +50,7 @@ ${state.prompt}
 
       await uploadToS3(filename, buffer, "image/png");
       const downloadUrl = await getFromS3(filename, 24 * 60 * 60);
+      // Note: The expiration time is set to 24 hours (86400 seconds) in this example.
 
       if (downloadUrl) {
         finalUrl = downloadUrl;
