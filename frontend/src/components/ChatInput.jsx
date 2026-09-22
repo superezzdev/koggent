@@ -140,9 +140,9 @@ function ChatInput() {
       label: "PPT",
     },
     {
-      id: "image",
+      id: "vision",
       icon: ImageIcon,
-      label: "Image",
+      label: "Vision",
     },
     {
       id: "search",

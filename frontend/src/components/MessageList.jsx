@@ -1,10 +1,15 @@
+import { useRef, useEffect } from "react";
 import { useSelector } from "react-redux";
 import MessageBubble from "./MessageBubble";
 
 function MessageList() {
   const { selectedConversation } = useSelector((state) => state.conversation);
-
   const { messages } = useSelector((state) => state.message);
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages?.length]);
 
   return (
     <div className="flex-1 overflow-y-auto px-6 py-6 space-y-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -49,6 +54,7 @@ function MessageList() {
           ))}
         </div>
       )}
+      <div ref={bottomRef} />
     </div>
   );
 }

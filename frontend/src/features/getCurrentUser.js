@@ -5,7 +5,9 @@ const getCurrentUser = async () => {
     const { data } = await api.get("/api/me");
     return data;
   } catch (error) {
-    console.log(error);
+    if (error.response?.status !== 401) {
+      console.warn("Failed to get current user:", error.message);
+    }
     return null;
   }
 };

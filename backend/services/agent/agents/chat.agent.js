@@ -7,21 +7,22 @@ import { getModel } from "../config/llmModels.js";
 import { getMemory } from "../config/memory.js";
 
 export const chatAgent = async (state) => {
-  const llm = await getModel(state.agent || "chat");
+  try {
+    const llm = await getModel(state.agent || "chat");
 
-  const history = (await getMemory(state.conversationId)) || [];
+    const history = (await getMemory(state.conversationId)) || [];
 
-  const searchContext = state.searchResults
-    ? `
+    const searchContext = state.searchResults
+      ? `
 Web Search Results:
 
 ${JSON.stringify(state.searchResults)}
 
 Answer the user using only the above search results.
 `
-    : "";
+      : "";
 
-  const systemPrompt = `
+    const systemPrompt = `
 You are koggent ai, an intelligent AI assistant.
 
 ${searchContext}
@@ -48,26 +49,42 @@ Formatting:
 - Never generate large walls of text.
 `;
 
-  const messages = [new SystemMessage(systemPrompt)];
+    const messages = [new SystemMessage(systemPrompt)];
 
-  history.forEach((msg) => {
-    if (msg.role == "user") {
-      messages.push(new HumanMessage(msg.content));
-    }
+    // Avoid duplicating state.prompt if it was already saved in history before invocation
+    const lastMsg = history[history.length - 1];
+    const historyHasCurrentPrompt =
+      lastMsg && lastMsg.role === "user" && lastMsg.content === state.prompt;
 
-    if (msg.role == "assistant") {
-      messages.push(new AIMessage(msg.content));
-    }
-  });
+    const previousHistory = historyHasCurrentPrompt
+      ? history.slice(0, -1)
+      : history;
 
-  messages.push(new HumanMessage(state.prompt));
+    previousHistory.forEach((msg) => {
+      if (msg.role == "user" && msg.content) {
+        messages.push(new HumanMessage(msg.content));
+      }
 
-  console.log(messages);
+      if (msg.role == "assistant" && msg.content) {
+        messages.push(new AIMessage(msg.content));
+      }
+    });
 
-  const response = await llm.invoke(messages);
+    messages.push(new HumanMessage(state.prompt));
 
-  return {
-    ...state,
-    aiResponse: response.content,
-  };
+    console.log(messages);
+
+    const response = await llm.invoke(messages);
+
+    return {
+      ...state,
+      aiResponse: response.content,
+    };
+  } catch (error) {
+    console.error("chatAgent error:", error);
+    return {
+      ...state,
+      aiResponse: "Error generating response.",
+    };
+  }
 };
