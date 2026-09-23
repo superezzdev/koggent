@@ -20,6 +20,7 @@ import { createConversation } from "../features/createConversation";
 import logOut from "../features/logOut";
 import { setUserdata } from "../redux/userSlice";
 import { setMessages, setArtifacts } from "../redux/messageSlice";
+import BillingDrawer from "./BillingDrawer";
 
 function SideBar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -30,6 +31,7 @@ function SideBar() {
     (state) => state.conversation
   );
   const { userData } = useSelector((state) => state.user);
+  const [showBilling, setShowBilling] = useState(false);
 
   const userIdentifier = userData?._id || userData?.userId;
 
@@ -197,24 +199,27 @@ function SideBar() {
                 key={conv?._id || i}
                 onClick={() => dispatch(setSelectedConversation(conv))}
                 className={`flex items-center gap-2.5 cursor-pointer mb-0.5 px-3 py-2.5 rounded-[10px] border transition-colors duration-150
-          ${isActive
-                    ? "bg-indigo-500/10 border-indigo-500/[0.18]"
-                    : "bg-transparent border-transparent"
-                  }`}
+          ${
+            isActive
+              ? "bg-indigo-500/10 border-indigo-500/[0.18]"
+              : "bg-transparent border-transparent"
+          }`}
               >
                 <div
                   className={`flex items-center justify-center shrink-0 w-[28px] h-[28px] rounded-lg transition-colors duration-150
-            ${isActive
-                      ? "bg-indigo-500/15 text-indigo-400"
-                      : "bg-white/[0.05] text-slate-500"
-                    }`}
+            ${
+              isActive
+                ? "bg-indigo-500/15 text-indigo-400"
+                : "bg-white/[0.05] text-slate-500"
+            }`}
                 >
                   <MessageSquare size={13} />
                 </div>
 
                 <span
-                  className={`text-[13px] font-medium truncate ${isActive ? "text-slate-100" : "text-slate-300"
-                    }`}
+                  className={`text-[13px] font-medium truncate ${
+                    isActive ? "text-slate-100" : "text-slate-300"
+                  }`}
                 >
                   {conv?.title || "New Chat"}
                 </span>
@@ -248,16 +253,21 @@ function SideBar() {
                   {userData?.name || "user"}
                 </p>
 
-                <p className="text-[11px] text-slate-600 mt-px">
-                  {"Free Plan"}
+                <p className="text-[11px] text-slate-400 mt-px">
+                  {(userData?.plan
+                    ? userData.plan.charAt(0).toUpperCase() +
+                      userData.plan.slice(1)
+                    : "Free") + " Plan"}
                 </p>
               </div>
 
               <div className="flex gap-1">
                 <button
+                  onClick={() => setShowBilling(true)}
+                  title="Billing & Plans"
                   className="flex items-center justify-center w-7 h-7 rounded-[7px]
-      border-none bg-transparent text-yellow-600 cursor-pointer
-      hover:bg-white/[0.08] hover:text-slate-400 transition-all duration-150"
+      border-none bg-transparent text-yellow-500 cursor-pointer
+      hover:bg-white/[0.08] hover:text-yellow-400 transition-all duration-150"
                 >
                   <Coins size={16} />
                 </button>
@@ -283,6 +293,8 @@ function SideBar() {
           )}
         </div>
       </div>
+
+      <BillingDrawer open={showBilling} onClose={() => setShowBilling(false)} />
     </div>
   );
 }

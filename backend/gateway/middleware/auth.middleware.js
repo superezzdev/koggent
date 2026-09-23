@@ -24,6 +24,9 @@ const protect = async (req, res, next) => {
     if (req.user) {
       if (!req.user._id && req.user.userId) req.user._id = req.user.userId;
       if (!req.user.userId && req.user._id) req.user.userId = req.user._id;
+      if (!req.user.plan) req.user.plan = "free";
+      if (req.user.credits === undefined) req.user.credits = 100;
+      if (req.user.totalCredits === undefined) req.user.totalCredits = 100;
     }
 
     next();

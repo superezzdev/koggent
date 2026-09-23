@@ -8,6 +8,12 @@ export const proxyWithHeader = (serviceUrl) => {
           srcReq.user.userId || srcReq.user._id || "",
         );
       }
+      const sessionId =
+        srcReq.cookies?.session ||
+        srcReq.headers.cookie?.match(/(?:^|;\s*)session=([^;]+)/)?.[1];
+      if (sessionId) {
+        proxyReqOpts.headers["x-session-id"] = sessionId;
+      }
       return proxyReqOpts;
     },
   });
