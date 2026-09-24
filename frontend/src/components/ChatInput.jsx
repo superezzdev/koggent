@@ -16,7 +16,7 @@ import { useState, useRef, useEffect } from "react";
 import sendMessage from "../features/sendMessage";
 import { createConversation } from "../features/createConversation";
 import { useDispatch, useSelector } from "react-redux";
-import { addMessage, setArtifacts } from "../redux/messageSlice";
+import { addMessage, setArtifacts, setIsLoading } from "../redux/messageSlice";
 import {
   addConversation,
   setSelectedConversation,
@@ -81,6 +81,7 @@ function ChatInput() {
     const trimmed = value.trim();
     if ((!trimmed && !selectedFile) || loading) return;
 
+    dispatch(setIsLoading(true));
     setLoading(true);
     setValue("");
 
@@ -139,6 +140,8 @@ function ChatInput() {
         data = await sendMessage(payload);
       }
 
+      dispatch(setIsLoading(false));
+
       handleClearFile();
       if (userData && data?.credits !== undefined) {
         dispatch(setUserdata({ ...userData, credits: data.credits }));
@@ -171,6 +174,7 @@ function ChatInput() {
         }),
       );
     } finally {
+      dispatch(setIsLoading(false));
       setLoading(false);
     }
   };
