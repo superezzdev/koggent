@@ -3,15 +3,21 @@ import mongoose from "mongoose";
 export const connectDb = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 4000,
+      serverSelectionTimeoutMS: 2000,
+      connectTimeoutMS: 2000,
     });
     console.log("Database connected to Atlas");
   } catch (error) {
-    console.warn("Atlas connection failed (port 27017 may be blocked by network):", error.message);
+    console.warn(
+      "Atlas connection failed (IP not whitelisted or port 27017 blocked):",
+      error.message,
+    );
     try {
+      await mongoose.disconnect();
       console.log("Attempting fallback to local MongoDB...");
-      await mongoose.connect("mongodb://localhost:27017/billing", {
-        serverSelectionTimeoutMS: 3000,
+      await mongoose.connect("mongodb://127.0.0.1:27017/billing", {
+        serverSelectionTimeoutMS: 2000,
+        connectTimeoutMS: 2000,
       });
       console.log("Database connected to local MongoDB successfully");
     } catch (localError) {

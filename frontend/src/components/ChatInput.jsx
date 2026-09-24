@@ -10,8 +10,9 @@ import {
   ImageIcon,
   Globe,
   Presentation,
+  X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import sendMessage from "../features/sendMessage";
 import { createConversation } from "../features/createConversation";
 import { useDispatch, useSelector } from "react-redux";
@@ -31,15 +32,45 @@ function ChatInput() {
 
   const { selectedConversation } = useSelector((state) => state.conversation);
   const { userData } = useSelector((state) => state.user);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const fileRef = useRef(null);
+
+  useEffect(() => {
+    if (!selectedFile) {
+      setPreviewUrl(null);
+      return;
+    }
+    const isImage =
+      selectedFile.type?.startsWith("image/") ||
+      /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(selectedFile.name || "");
+    if (isImage) {
+      const url = URL.createObjectURL(selectedFile);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [selectedFile]);
+
   const dispatch = useDispatch();
 
   const handleSendMessage = async () => {
     const trimmed = value.trim();
-    if (!trimmed || loading) return;
+    if ((!trimmed && !selectedFile) || loading) return;
 
     setLoading(true);
     setValue("");
-    dispatch(addMessage({ role: "user", content: trimmed }));
+
+    const promptText =
+      trimmed ||
+      (selectedFile
+        ? selectedFile.type === "application/pdf"
+          ? "Please analyze this PDF document."
+          : "Please analyze this image."
+        : "");
+
+    dispatch(addMessage({ role: "user", content: promptText }));
 
     try {
       let currentConv = selectedConversation;
@@ -55,7 +86,7 @@ function ChatInput() {
       }
 
       if (currentConv?.title === "New Chat" && convId) {
-        const newTitle = trimmed.slice(0, 40);
+        const newTitle = (trimmed || promptText).slice(0, 40);
         await updateConversation({
           id: convId,
           title: newTitle,
@@ -69,13 +100,27 @@ function ChatInput() {
         );
       }
 
-      const payload = {
-        prompt: trimmed,
-        conversationId: convId,
-        agent: selectedAgent.toLowerCase(),
-      };
+      let data;
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append("prompt", promptText);
+        formData.append("conversationId", convId || "");
+        formData.append("agent", selectedAgent.toLowerCase());
+        formData.append("file", selectedFile);
+        data = await sendMessage(formData);
+      } else {
+        const payload = {
+          prompt: promptText,
+          conversationId: convId,
+          agent: selectedAgent.toLowerCase(),
+        };
+        data = await sendMessage(payload);
+      }
 
-      const data = await sendMessage(payload);
+      setSelectedFile(null);
+      if (fileRef.current) {
+        fileRef.current.value = "";
+      }
       if (userData && data?.credits !== undefined) {
         dispatch(setUserdata({ ...userData, credits: data.credits }));
       }
@@ -200,6 +245,45 @@ function ChatInput() {
           })}
         </div>
 
+        {selectedFile && (
+          <div className="my-2">
+            <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
+              {selectedFile?.type === "application/pdf" ||
+              selectedFile?.name?.toLowerCase().endsWith(".pdf") ? (
+                <FileText size={18} className="text-red-400 shrink-0" />
+              ) : previewUrl ? (
+                <img
+                  src={previewUrl}
+                  alt="preview"
+                  className="h-8 w-8 rounded-lg object-cover shrink-0"
+                />
+              ) : (
+                <ImageIcon size={18} className="text-blue-400 shrink-0" />
+              )}
+              <div className="max-w-[180px] sm:max-w-[260px]">
+                <p className="text-xs text-white truncate">{selectedFile?.name}</p>
+
+                <p className="text-[10px] text-slate-500">
+                  {Math.ceil(selectedFile.size / 1024)}KB
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="ml-2 cursor-pointer p-1 rounded hover:bg-white/[0.06] text-slate-500 hover:text-white transition-colors"
+                onClick={() => {
+                  setSelectedFile(null);
+                  if (fileRef.current) {
+                    fileRef.current.value = "";
+                  }
+                }}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
         <textarea
           placeholder="Ask Anything..."
           onChange={(e) => setValue(e.target.value)}
@@ -212,20 +296,42 @@ function ChatInput() {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
-            <button className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:text-slate-400 hover:bg-white/[0.05] border border-transparent hover:border-white/[0.06] transition-all duration-150 bg-transparent cursor-pointer">
+            <input
+              type="file"
+              accept=".pdf,image/*"
+              hidden
+              ref={fileRef}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+
+                if (file) {
+                  setSelectedFile(file);
+                }
+              }}
+            />
+
+            <button
+              type="button"
+              className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:text-slate-400 hover:bg-white/[0.05] border border-transparent hover:border-white/[0.06] transition-all duration-150 bg-transparent cursor-pointer"
+              onClick={() => fileRef.current?.click()}
+            >
               <Paperclip size={16} />
             </button>
 
-            <button className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:text-slate-400 hover:bg-white/[0.05] border border-transparent hover:border-white/[0.06] transition-all duration-150 bg-transparent cursor-pointer">
+            <button
+              type="button"
+              className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:text-slate-400 hover:bg-white/[0.05] border border-transparent hover:border-white/[0.06] transition-all duration-150 bg-transparent cursor-pointer"
+            >
               <Mic size={16} />
             </button>
           </div>
 
           <button
-            disabled={!value.trim() || loading}
+            type="button"
+            disabled={(!value.trim() && !selectedFile) || loading}
             onClick={handleSendMessage}
             className={`flex items-center justify-center w-8 h-8 rounded-lg border-none cursor-pointer transition-all duration-150 ${
-              value.trim() && !loading
+              (value.trim() || selectedFile) && !loading
                 ? "bg-linear-to-br from-indigo-500 to-violet-700 hover:opacity-90 text-white"
                 : "bg-white/[0.05] text-slate-600 cursor-not-allowed"
             }`}
