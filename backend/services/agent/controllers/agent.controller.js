@@ -1,4 +1,5 @@
 import axios from "axios";
+import fs from "fs";
 import { graph } from "../graph/graph.js";
 import { addMessage } from "../config/memory.js";
 import redis from "../../../shared/redis/redis.js";
@@ -89,5 +90,13 @@ export const agent = async (req, res) => {
     return res.status(500).json({
       message: `agent error ${error.message || error}`,
     });
+  } finally {
+    if (file?.path && fs.existsSync(file.path)) {
+      try {
+        fs.unlinkSync(file.path);
+      } catch (unlinkErr) {
+        console.warn("Notice: Failed to unlink temp file in controller:", unlinkErr.message);
+      }
+    }
   }
 };

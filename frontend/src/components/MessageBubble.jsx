@@ -189,7 +189,7 @@ function MessageBubble({ role, content, images = [] }) {
             ====================== */
 
             code: ({ className, children }) => {
-              const value = String(children).trim();
+              const value = String(children || "").replace(/\n$/, "");
 
               /*
                * Inline code
@@ -330,7 +330,7 @@ function MessageBubble({ role, content, images = [] }) {
             },
           }}
         >
-          {content}
+          {String(content || "")}
         </Markdown>
       </div>
 

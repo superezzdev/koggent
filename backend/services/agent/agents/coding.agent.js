@@ -291,7 +291,7 @@ ${state.prompt}
           title: state.prompt,
         },
       ],
-      images: fetchedImages.map((img) => img.url),
+      images: [],
       credits: creditRes.credits,
       creditsDeducted: true,
     };
