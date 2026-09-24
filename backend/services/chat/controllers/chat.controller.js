@@ -79,6 +79,14 @@ export const saveMessage = async (req, res) => {
       artifacts: artifacts || [],
     });
 
+    try {
+      await Conversation.findByIdAndUpdate(conversationId, {
+        updatedAt: new Date(),
+      });
+    } catch (updateErr) {
+      console.warn("Notice: Failed to bump conversation updatedAt:", updateErr.message);
+    }
+
     return res.status(200).json(message);
   } catch (error) {
     return res.status(500).json({

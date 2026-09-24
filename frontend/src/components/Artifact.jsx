@@ -24,6 +24,32 @@ function Artifact() {
   const [activeFile, setActiveFile] = useState(0);
   const [copied, setCopied] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth >= 1024;
+    }
+    return true;
+  });
+
+  // Suppress harmless Monaco Editor internal cancellation promise rejections
+  useEffect(() => {
+    const handleRejection = (event) => {
+      const msg =
+        event.reason?.message ||
+        event.reason?.name ||
+        String(event.reason || "");
+      if (
+        msg.includes("Canceled") ||
+        msg.includes("cancelled") ||
+        event.reason?.type === "cancelation"
+      ) {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener("unhandledrejection", handleRejection);
+    return () =>
+      window.removeEventListener("unhandledrejection", handleRejection);
+  }, []);
 
   // Flexible width state
   const [panelWidth, setPanelWidth] = useState(() => {
@@ -144,6 +170,8 @@ function Artifact() {
 
   useEffect(() => {
     const handleResize = () => {
+      const isLg = window.innerWidth >= 1024;
+      setIsDesktop(isLg);
       setPanelWidth((prev) => {
         const maxW = Math.max(MIN_WIDTH, window.innerWidth - 400);
         return Math.min(prev, maxW);
@@ -316,19 +344,20 @@ function Artifact() {
       )}
 
       {/* Desktop Panel */}
-      <motion.div
-        initial={{ width: collapsed ? 48 : panelWidth }}
-        animate={{ width: collapsed ? 48 : panelWidth }}
-        transition={
-          isDragging
-            ? { duration: 0 }
-            : { duration: 0.25, ease: easeInOut }
-        }
-        style={{ width: collapsed ? 48 : panelWidth }}
-        className={`hidden lg:flex h-full border-l border-white/[0.06] flex-col overflow-hidden shrink-0 relative ${
-          isDragging ? "select-none" : ""
-        }`}
-      >
+      {isDesktop && (
+        <motion.div
+          initial={{ width: collapsed ? 48 : panelWidth }}
+          animate={{ width: collapsed ? 48 : panelWidth }}
+          transition={
+            isDragging
+              ? { duration: 0 }
+              : { duration: 0.25, ease: easeInOut }
+          }
+          style={{ width: collapsed ? 48 : panelWidth }}
+          className={`h-full border-l border-white/[0.06] flex flex-col overflow-hidden shrink-0 relative ${
+            isDragging ? "select-none" : ""
+          }`}
+        >
         {/* Fullscreen overlay during dragging to prevent iframe/monaco stealing mouse events */}
         {isDragging && (
           <div className="fixed inset-0 z-50 cursor-col-resize select-none pointer-events-auto" />
@@ -488,7 +517,7 @@ function Artifact() {
                   <Editor
                     theme="vs-dark"
                     language={detectLanguage(file?.name)}
-                    value={file?.content}
+                    value={file?.content || ""}
                     options={{
                       readOnly: true,
                       minimap: { enabled: false },
@@ -530,7 +559,8 @@ function Artifact() {
           </div>
         )}
       </motion.div>
-    </>
+    )}
+  </>
   );
 }
 

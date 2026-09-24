@@ -7,6 +7,8 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "dev": "node run-all.js",
+    "start": "node run-all.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {

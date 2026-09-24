@@ -75,6 +75,7 @@ export const login = async (req, res) => {
     );
 
     res.cookie("session", sessionId, {
+      path: "/",
       httpOnly: true,
       secure: false,
       sameSite: "lax",
@@ -113,9 +114,10 @@ export const logOut = async (req, res) => {
     }
 
     res.clearCookie("session", {
+      path: "/",
       httpOnly: true,
       secure: false,
-      sameSite: "strict",
+      sameSite: "lax",
     });
 
     return res.status(200).json({
@@ -193,8 +195,10 @@ export const deductCredits = async (req, res) => {
       pdf: 10,
       ppt: 10,
       vision: 10,
+      image: 10,
       imageAnalyzer: 10,
       pdfRag: 10,
+      "pdf-rag": 10,
     };
 
     const user = await User.findById(userId);
