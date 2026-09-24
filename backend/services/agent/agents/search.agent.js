@@ -1,8 +1,22 @@
 import { searchTool } from "../config/tavily.js";
 import { searchUnsplashPhotos } from "../utils/unsplash.js";
+import { deductCredits } from "../utils/deductCredits.js";
+
 
 export const searchAgent = async (state) => {
   try {
+    const creditRes = await deductCredits(state.userId, "search");
+    if (!creditRes?.success) {
+      return {
+        ...state,
+        aiResponse: `⚠️ ${creditRes?.message || "Not enough credits."} Please upgrade your plan in Settings & Billing to continue.`,
+        searchResults: [],
+        images: [],
+        credits: creditRes?.credits ?? state.credits,
+        creditsDeducted: true,
+      };
+    }
+
     const results = await searchTool.invoke({
       query: state.prompt,
     });
@@ -20,8 +34,11 @@ export const searchAgent = async (state) => {
       ...state,
       searchResults: results,
       images,
+      credits: creditRes.credits,
+      creditsDeducted: true,
     };
   } catch (error) {
+    console.error("searchAgent error:", error);
     return {
       ...state,
       searchResults: [],

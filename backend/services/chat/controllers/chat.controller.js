@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Conversation from "../models/conversation.model.js";
 import Message from "../models/message.model.js";
 
@@ -40,6 +41,12 @@ export const updateConversation = async (req, res) => {
     const targetId = req.body.id || req.body.conversationId;
     const { title } = req.body;
 
+    if (!targetId || !mongoose.Types.ObjectId.isValid(targetId)) {
+      return res
+        .status(400)
+        .json({ message: "Invalid or missing conversation ID" });
+    }
+
     const conversation = await Conversation.findByIdAndUpdate(
       targetId,
       { title },
@@ -57,6 +64,12 @@ export const updateConversation = async (req, res) => {
 export const saveMessage = async (req, res) => {
   try {
     const { conversationId, role, content, images, artifacts } = req.body;
+
+    if (!conversationId || !mongoose.Types.ObjectId.isValid(conversationId)) {
+      return res
+        .status(400)
+        .json({ message: "Invalid or missing conversation ID" });
+    }
 
     const message = await Message.create({
       conversationId,
@@ -76,6 +89,15 @@ export const saveMessage = async (req, res) => {
 
 export const getMessages = async (req, res) => {
   try {
+    if (
+      !req.params.conversationId ||
+      !mongoose.Types.ObjectId.isValid(req.params.conversationId)
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Invalid or missing conversation ID" });
+    }
+
     const messages = await Message.find({
       conversationId: req.params.conversationId,
     }).sort({ createdAt: 1 });

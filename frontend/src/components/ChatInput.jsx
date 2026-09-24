@@ -22,6 +22,7 @@ import {
   setConvTitle,
 } from "../redux/conversationSlice";
 import { updateConversation } from "../features/updateConversation";
+import { setUserdata } from "../redux/userSlice";
 
 function ChatInput() {
   const [value, setValue] = useState("");
@@ -29,6 +30,7 @@ function ChatInput() {
   const [loading, setLoading] = useState(false);
 
   const { selectedConversation } = useSelector((state) => state.conversation);
+  const { userData } = useSelector((state) => state.user);
   const dispatch = useDispatch();
 
   const handleSendMessage = async () => {
@@ -74,6 +76,9 @@ function ChatInput() {
       };
 
       const data = await sendMessage(payload);
+      if (userData && data?.credits !== undefined) {
+        dispatch(setUserdata({ ...userData, credits: data.credits }));
+      }
       dispatch(setArtifacts(data?.artifacts || []));
       if (data?.answer) {
         dispatch(

@@ -2,9 +2,21 @@ import { getModel } from "../config/llmModels.js";
 import { generatePpt } from "../utils/generatePpt.js";
 import { uploadToS3 } from "../utils/uploadToS3.js";
 import { getFromS3 } from "../utils/getFromS3.js";
+import { deductCredits } from "../utils/deductCredits.js";
+
 
 export const pptAgent = async (state) => {
   try {
+    const creditRes = await deductCredits(state.userId, "ppt");
+    if (!creditRes?.success) {
+      return {
+        ...state,
+        aiResponse: `⚠️ ${creditRes?.message || "Not enough credits."} Please upgrade your plan in Settings & Billing to continue.`,
+        credits: creditRes?.credits ?? state.credits,
+        creditsDeducted: true,
+      };
+    }
+
     const llm = await getModel("ppt");
 
     const prompt = `You are a professional presentation designer.
@@ -101,6 +113,8 @@ ${state.prompt}`;
 
 _Link expires in 24 hours._
 `,
+      credits: creditRes.credits,
+      creditsDeducted: true,
     };
   } catch (error) {
     console.error("PPT generation error:", error);

@@ -3,12 +3,10 @@ import {
   getRelevantImagesForPrompt,
   replaceBrokenImages,
 } from "../utils/unsplash.js";
+import { deductCredits } from "../utils/deductCredits.js";
 
-// -----------------------------------------------------------------------
-// Advanced tool detection — only injected into the prompt if the user
-// actually asked for it. Keeps default output lean (vanilla HTML/CSS/JS)
-// while unlocking heavier tooling on demand.
-// -----------------------------------------------------------------------
+
+
 const ADVANCED_TOOLS = [
   {
     match: /\bgsap\b/i,
@@ -52,11 +50,7 @@ function detectAdvancedTools(prompt) {
   return ADVANCED_TOOLS.filter((t) => t.match.test(prompt));
 }
 
-// -----------------------------------------------------------------------
-// Design system brief — this is the actual lever for "award-winning"
-// output. Vague adjectives ("beautiful", "modern") get ignored by LLMs;
-// concrete constraints (ratios, scales, named techniques) don't.
-// -----------------------------------------------------------------------
+
 const DESIGN_SYSTEM_BRIEF = `
 DESIGN STANDARD: Build to an Awwwards Site-of-the-Day / FWA bar, not a template bar.
 Judge every decision against: does this look like it shipped from a top design studio
@@ -110,6 +104,18 @@ If the latter, redo it.
 `.trim();
 
 export const codingAgent = async (state) => {
+  const creditRes = await deductCredits(state.userId, "coding");
+  if (!creditRes?.success) {
+    return {
+      ...state,
+      aiResponse: `⚠️ ${creditRes?.message || "Not enough credits."} Please upgrade your plan in Settings & Billing to continue.`,
+      artifacts: [],
+      images: [],
+      credits: creditRes?.credits ?? state.credits,
+      creditsDeducted: true,
+    };
+  }
+
   const intentLlm = await getModel("intent");
   const llm = await getModel("coding");
 
@@ -267,6 +273,8 @@ ${state.prompt}
         ...state,
         aiResponse: res.content || "Code Generated Successfully.",
         artifacts: [],
+        credits: creditRes.credits,
+        creditsDeducted: true,
       };
     }
 
@@ -284,6 +292,8 @@ ${state.prompt}
         },
       ],
       images: fetchedImages.map((img) => img.url),
+      credits: creditRes.credits,
+      creditsDeducted: true,
     };
   }
 
@@ -321,5 +331,8 @@ ${state.prompt}
     ...state,
     aiResponse: data,
     artifacts: [],
+    credits: creditRes.credits,
+    creditsDeducted: true,
   };
 };
+
