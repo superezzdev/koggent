@@ -36,22 +36,44 @@ function ChatInput() {
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileRef = useRef(null);
 
-  useEffect(() => {
-    if (!selectedFile) {
+  const handleClearFile = () => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileRef.current) {
+      fileRef.current.value = "";
+    }
+  };
+
+  const handleFileSelect = (file) => {
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    if (!file) {
+      setSelectedFile(null);
       setPreviewUrl(null);
       return;
     }
+    setSelectedFile(file);
     const isImage =
-      selectedFile.type?.startsWith("image/") ||
-      /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(selectedFile.name || "");
+      file.type?.startsWith("image/") ||
+      /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(file.name || "");
     if (isImage) {
-      const url = URL.createObjectURL(selectedFile);
-      setPreviewUrl(url);
-      return () => URL.revokeObjectURL(url);
+      setPreviewUrl(URL.createObjectURL(file));
     } else {
       setPreviewUrl(null);
     }
-  }, [selectedFile]);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const dispatch = useDispatch();
 
@@ -117,10 +139,7 @@ function ChatInput() {
         data = await sendMessage(payload);
       }
 
-      setSelectedFile(null);
-      if (fileRef.current) {
-        fileRef.current.value = "";
-      }
+      handleClearFile();
       if (userData && data?.credits !== undefined) {
         dispatch(setUserdata({ ...userData, credits: data.credits }));
       }
@@ -204,7 +223,7 @@ function ChatInput() {
   return (
     <div className="w-full overflow-hidden px-3 md:px-5 py-4 border-t border-white/[0.06] bg-[#0d0f14]">
       <div className="flex flex-col gap-2 bg-white/[0.03] border border-white/[0.07] rounded-2xl px-4 pt-3.5 pb-3">
-        <div className="flex w-[80%] gap-2 pr-2 flex-wrap">
+        <div className="flex w-full gap-2 pb-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {agents.map((agent) => {
             const isActive =
               selectedAgent.toLowerCase() === agent.id.toLowerCase();
@@ -271,12 +290,7 @@ function ChatInput() {
               <button
                 type="button"
                 className="ml-2 cursor-pointer p-1 rounded hover:bg-white/[0.06] text-slate-500 hover:text-white transition-colors"
-                onClick={() => {
-                  setSelectedFile(null);
-                  if (fileRef.current) {
-                    fileRef.current.value = "";
-                  }
-                }}
+                onClick={handleClearFile}
               >
                 <X size={14} />
               </button>
@@ -303,9 +317,8 @@ function ChatInput() {
               ref={fileRef}
               onChange={(e) => {
                 const file = e.target.files?.[0];
-
                 if (file) {
-                  setSelectedFile(file);
+                  handleFileSelect(file);
                 }
               }}
             />

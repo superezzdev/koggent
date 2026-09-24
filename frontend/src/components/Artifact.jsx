@@ -7,6 +7,7 @@ import {
   Minimize2,
   PanelRightClose,
   PanelRightOpen,
+  X,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
@@ -22,6 +23,7 @@ function Artifact() {
   const [tab, setTab] = useState("code");
   const [activeFile, setActiveFile] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Flexible width state
   const [panelWidth, setPanelWidth] = useState(() => {
@@ -86,7 +88,7 @@ function Artifact() {
   };
 
   const detectLanguage = (fileName = "") => {
-    const name = fileName.toLowerCase();
+    const name = (fileName || "").toLowerCase();
 
     if (name.endsWith(".html")) return "html";
     if (name.endsWith(".css")) return "css";
@@ -114,7 +116,7 @@ function Artifact() {
 
     const handleMouseMove = (e) => {
       const windowWidth = window.innerWidth;
-      const maxW = Math.max(MIN_WIDTH, windowWidth - 360);
+      const maxW = Math.max(MIN_WIDTH, windowWidth - 400);
       const newWidth = Math.min(Math.max(windowWidth - e.clientX, MIN_WIDTH), maxW);
       setPanelWidth(newWidth);
       setIsMaximized(false);
@@ -140,11 +142,10 @@ function Artifact() {
     }
   }, [panelWidth, isDragging]);
 
-  // Handle window resize boundary clamping
   useEffect(() => {
     const handleResize = () => {
       setPanelWidth((prev) => {
-        const maxW = Math.max(MIN_WIDTH, window.innerWidth - 360);
+        const maxW = Math.max(MIN_WIDTH, window.innerWidth - 400);
         return Math.min(prev, maxW);
       });
     };
@@ -158,7 +159,7 @@ function Artifact() {
       setIsMaximized(false);
     } else {
       preMaximizeWidthRef.current = panelWidth;
-      const maxW = Math.max(MIN_WIDTH, window.innerWidth - 360);
+      const maxW = Math.max(MIN_WIDTH, window.innerWidth - 400);
       setPanelWidth(maxW);
       setIsMaximized(true);
     }
@@ -172,220 +173,364 @@ function Artifact() {
   if (!artifacts || artifacts.length === 0) return null;
 
   return (
-    <motion.div
-      initial={false}
-      animate={{ width: collapsed ? 48 : panelWidth }}
-      transition={
-        isDragging
-          ? { duration: 0 }
-          : { duration: 0.25, ease: easeInOut }
-      }
-      style={{ width: collapsed ? 48 : panelWidth }}
-      className={`hidden lg:flex h-full border-l border-white/[0.06] flex-col overflow-hidden shrink-0 relative ${
-        isDragging ? "select-none" : ""
-      }`}
-    >
-      {/* Fullscreen overlay during dragging to prevent iframe/monaco stealing mouse events */}
-      {isDragging && (
-        <div className="fixed inset-0 z-50 cursor-col-resize select-none pointer-events-auto" />
-      )}
+    <>
+      {/* Mobile Toggle Button */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="lg:hidden fixed top-3 right-4 z-40 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[12px] font-medium shadow-md shadow-indigo-500/25 border-none cursor-pointer transition-colors duration-150"
+        title="View Code & Artifact"
+      >
+        <Code2 size={13} />
+        <span>View Code</span>
+      </button>
 
-      {/* Resize handle */}
-      {!collapsed && (
-        <div
-          onMouseDown={handleMouseDown}
-          onDoubleClick={handleResetWidth}
-          title="Drag to resize width (Double-click to reset)"
-          className={`absolute top-0 bottom-0 left-0 w-3 -translate-x-1.5 z-30 cursor-col-resize select-none flex items-center justify-center group ${
-            isDragging ? "pointer-events-auto" : ""
-          }`}
-        >
-          {/* Vertical highlight line */}
+      {/* Mobile Artifact Drawer / Sheet */}
+      {mobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop */}
           <div
-            className={`w-[2px] h-full transition-colors duration-150 ${
-              isDragging
-                ? "bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"
-                : "bg-transparent group-hover:bg-indigo-500/70"
-            }`}
+            onClick={() => setMobileOpen(false)}
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
           />
-          {/* Pill handle indicator */}
-          <div
-            className={`absolute top-1/2 -translate-y-1/2 w-1 h-8 rounded-full transition-all duration-150 pointer-events-none ${
-              isDragging
-                ? "bg-indigo-400 opacity-100 scale-y-110"
-                : "bg-white/20 group-hover:bg-indigo-400 group-hover:opacity-100 opacity-0"
-            }`}
-          />
+
+          {/* Drawer Panel */}
+          <div className="relative w-full sm:w-[500px] h-full bg-[#0d0f14] border-l border-white/[0.08] flex flex-col z-10 shadow-2xl">
+            {/* Header */}
+            <div className="h-14 px-4 border-b border-white/[0.06] flex items-center justify-between shrink-0 bg-[#0d0f14]">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/20 shrink-0">
+                  <Code2 className="text-indigo-400" size={14} />
+                </div>
+                <span className="text-[13.5px] font-medium text-slate-200 truncate">
+                  {currentArtifact?.title || "Artifact"}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  className="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-medium text-slate-300 hover:text-white bg-white/[0.05] hover:bg-white/[0.08] rounded-lg transition-colors border border-white/[0.06] cursor-pointer"
+                  onClick={handleCopy}
+                  title="Copy code"
+                >
+                  {copied ? (
+                    <Check size={13} className="text-emerald-400" />
+                  ) : (
+                    <Copy size={13} />
+                  )}
+                  <span>{copied ? "Copied" : "Copy"}</span>
+                </button>
+
+                <button
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-400 hover:text-white bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer border border-white/[0.06]"
+                  title="Close"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+
+            {/* Code / Preview tabs */}
+            {canPreview && (
+              <div className="flex items-center gap-1 bg-white/[0.04] border border-white/[0.06] p-1 mx-3 my-2 rounded-lg shrink-0">
+                <button
+                  onClick={() => setTab("code")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium rounded-md transition-colors duration-150 cursor-pointer ${
+                    tab === "code"
+                      ? "bg-indigo-500 text-white"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <Code2 size={12} />
+                  Code
+                </button>
+
+                <button
+                  onClick={() => setTab("preview")}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-medium rounded-md transition-colors duration-150 cursor-pointer ${
+                    tab === "preview"
+                      ? "bg-indigo-500 text-white"
+                      : "text-slate-400 hover:text-slate-200"
+                  }`}
+                >
+                  <Eye size={12} />
+                  Preview
+                </button>
+              </div>
+            )}
+
+            {/* File tabs */}
+            {tab === "code" && files.length > 0 && (
+              <div className="flex h-auto border-b border-white/[0.06] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden shrink-0 bg-[#0d0f14]">
+                {files.map((f, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setActiveFile(index)}
+                    className={`px-3.5 py-2 text-[11px] font-medium whitespace-nowrap transition-colors duration-150 border-r border-white/[0.05] relative cursor-pointer bg-transparent ${
+                      safeActiveFile === index
+                        ? "text-indigo-400 bg-indigo-500/[0.06]"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {f?.name}
+                    {safeActiveFile === index && (
+                      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-indigo-500 rounded-t-full" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Mobile Editor or Preview */}
+            <div className="flex-1 min-h-0 overflow-hidden relative">
+              {tab === "preview" && canPreview ? (
+                <iframe
+                  title="mobile-preview"
+                  srcDoc={previewDoc}
+                  sandbox="allow-scripts"
+                  className="w-full h-full bg-white border-none"
+                />
+              ) : (
+                <div className="w-full h-full overflow-hidden">
+                  <Editor
+                    theme="vs-dark"
+                    language={detectLanguage(file?.name)}
+                    value={file?.content || ""}
+                    options={{
+                      readOnly: true,
+                      minimap: { enabled: false },
+                      fontSize: 12,
+                      wordWrap: "on",
+                      automaticLayout: true,
+                      scrollBeyondLastLine: false,
+                      padding: { top: 12 },
+                      lineNumbers: "on",
+                      renderLineHighlight: "none",
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Width indicator tooltip while dragging */}
-      {isDragging && (
-        <div className="absolute top-3 left-3 z-40 px-2.5 py-1 bg-[#13151c] border border-indigo-500/30 rounded-md text-[11px] font-mono text-indigo-300 shadow-xl pointer-events-none flex items-center gap-1.5">
-          <span>Width:</span>
-          <span className="font-semibold text-white">{Math.round(panelWidth)}px</span>
-        </div>
-      )}
+      {/* Desktop Panel */}
+      <motion.div
+        initial={{ width: collapsed ? 48 : panelWidth }}
+        animate={{ width: collapsed ? 48 : panelWidth }}
+        transition={
+          isDragging
+            ? { duration: 0 }
+            : { duration: 0.25, ease: easeInOut }
+        }
+        style={{ width: collapsed ? 48 : panelWidth }}
+        className={`hidden lg:flex h-full border-l border-white/[0.06] flex-col overflow-hidden shrink-0 relative ${
+          isDragging ? "select-none" : ""
+        }`}
+      >
+        {/* Fullscreen overlay during dragging to prevent iframe/monaco stealing mouse events */}
+        {isDragging && (
+          <div className="fixed inset-0 z-50 cursor-col-resize select-none pointer-events-auto" />
+        )}
 
-      {!collapsed ? (
-        <div className="flex flex-col h-full bg-[#0d0f14]">
-          {/* Header */}
-          <div className="h-14 px-4 border-b border-white/[0.06] flex items-center gap-3 shrink-0">
+        {/* Resize handle */}
+        {!collapsed && (
+          <div
+            onMouseDown={handleMouseDown}
+            onDoubleClick={handleResetWidth}
+            title="Drag to resize width (Double-click to reset)"
+            className={`absolute top-0 bottom-0 left-0 w-3 -translate-x-1.5 z-30 cursor-col-resize select-none flex items-center justify-center group ${
+              isDragging ? "pointer-events-auto" : ""
+            }`}
+          >
+            {/* Vertical highlight line */}
+            <div
+              className={`w-[2px] h-full transition-colors duration-150 ${
+                isDragging
+                  ? "bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"
+                  : "bg-transparent group-hover:bg-indigo-500/70"
+              }`}
+            />
+            {/* Pill handle indicator */}
+            <div
+              className={`absolute top-1/2 -translate-y-1/2 w-1 h-8 rounded-full transition-all duration-150 pointer-events-none ${
+                isDragging
+                  ? "bg-indigo-400 opacity-100 scale-y-110"
+                  : "bg-white/20 group-hover:bg-indigo-400 group-hover:opacity-100 opacity-0"
+              }`}
+            />
+          </div>
+        )}
+
+        {/* Width indicator tooltip while dragging */}
+        {isDragging && (
+          <div className="absolute top-3 left-3 z-40 px-2.5 py-1 bg-[#13151c] border border-indigo-500/30 rounded-md text-[11px] font-mono text-indigo-300 shadow-xl pointer-events-none flex items-center gap-1.5">
+            <span>Width:</span>
+            <span className="font-semibold text-white">{Math.round(panelWidth)}px</span>
+          </div>
+        )}
+
+        {!collapsed ? (
+          <div className="flex flex-col h-full bg-[#0d0f14]">
+            {/* Header */}
+            <div className="h-14 px-4 border-b border-white/[0.06] flex items-center gap-3 shrink-0">
+              <button
+                className="flex items-center justify-center w-7 h-7 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-colors duration-150 bg-transparent border-none cursor-pointer shrink-0"
+                onClick={() => setCollapsed(true)}
+                title="Collapse panel"
+              >
+                <PanelRightClose size={16} />
+              </button>
+
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <div className="flex items-center justify-center w-6 h-6 rounded-md bg-indigo-500/10 border border-indigo-500/20 shrink-0">
+                  <Code2 className="text-indigo-400" size={12} />
+                </div>
+
+                <div className="text-[13px] font-medium text-slate-200 truncate">
+                  {artifacts[0]?.title}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  className="flex items-center justify-center w-7 h-7 text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] rounded-lg transition-colors duration-150 bg-transparent border-none cursor-pointer"
+                  onClick={handleToggleMaximize}
+                  title={isMaximized ? "Restore width" : "Maximize width"}
+                >
+                  {isMaximized ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+                </button>
+
+                <button
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] rounded-lg transition-colors duration-150 bg-transparent border-none cursor-pointer"
+                  onClick={handleCopy}
+                  title="Copy code"
+                >
+                  {copied ? <Check size={15} /> : <Copy size={15} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Code / Preview tabs */}
+            {canPreview && (
+              <div className="flex items-center gap-1 bg-white/[0.04] border border-white/[0.06] p-1 mx-3 my-2 rounded-lg shrink-0">
+                <button
+                  onClick={() => setTab("code")}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors duration-150 cursor-pointer ${
+                    tab === "code"
+                      ? "bg-indigo-500 text-white"
+                      : "text-slate-500 hover:text-slate-200"
+                  }`}
+                >
+                  <Code2 size={11} />
+                  Code
+                </button>
+
+                <button
+                  onClick={() => setTab("preview")}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors duration-150 cursor-pointer ${
+                    tab === "preview"
+                      ? "bg-indigo-500 text-white"
+                      : "text-slate-500 hover:text-slate-200"
+                  }`}
+                >
+                  <Eye size={11} />
+                  Preview
+                </button>
+              </div>
+            )}
+
+            {tab === "code" && (
+              <div className="flex h-auto border-b border-white/[0.06] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden shrink-0">
+                {files.map((f, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setActiveFile(index)}
+                    className={`px-4 py-2.5 text-[11px] font-medium whitespace-nowrap transition-colors duration-150 border-r border-white/[0.05] relative cursor-pointer bg-transparent ${
+                      safeActiveFile === index
+                        ? "text-indigo-400"
+                        : "text-slate-500 hover:text-slate-300"
+                    }`}
+                  >
+                    {f?.name}
+
+                    {safeActiveFile === index && (
+                      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-indigo-500 rounded-t-full" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="flex-1 overflow-hidden">
+              {tab === "preview" && canPreview ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="w-full h-full"
+                >
+                  <iframe
+                    title="preview"
+                    srcDoc={previewDoc}
+                    sandbox="allow-scripts"
+                    className="w-full h-full bg-white"
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="w-full h-full overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  <Editor
+                    theme="vs-dark"
+                    language={detectLanguage(file?.name)}
+                    value={file?.content}
+                    options={{
+                      readOnly: true,
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      wordWrap: "on",
+                      automaticLayout: true,
+                      scrollBeyondLastLine: false,
+                      padding: { top: 16 },
+                      lineNumbers: "on",
+                      renderLineHighlight: "none",
+                    }}
+                  />
+                </motion.div>
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Collapsed */
+          <div className="hidden lg:flex h-full bg-[#0d0f14] flex-col items-center py-4 gap-3 shrink-0">
             <button
               className="flex items-center justify-center w-7 h-7 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-colors duration-150 bg-transparent border-none cursor-pointer shrink-0"
-              onClick={() => setCollapsed(true)}
-              title="Collapse panel"
+              onClick={() => setCollapsed(false)}
+              title="Expand artifact"
             >
-              <PanelRightClose size={16} />
+              <PanelRightOpen size={16} />
             </button>
 
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="flex items-center justify-center w-6 h-6 rounded-md bg-indigo-500/10 border border-indigo-500/20 shrink-0">
-                <Code2 className="text-indigo-400" size={12} />
-              </div>
-
-              <div className="text-[13px] font-medium text-slate-200 truncate">
+              <div
+                className="text-[10px] font-medium text-slate-600 tracking-widest uppercase whitespace-nowrap"
+                style={{
+                  writingMode: "vertical-lr",
+                  transform: "rotate(180deg)",
+                }}
+              >
                 {artifacts[0]?.title}
               </div>
             </div>
-
-            <div className="flex items-center gap-1 shrink-0">
-              <button
-                className="flex items-center justify-center w-7 h-7 text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] rounded-lg transition-colors duration-150 bg-transparent border-none cursor-pointer"
-                onClick={handleToggleMaximize}
-                title={isMaximized ? "Restore width" : "Maximize width"}
-              >
-                {isMaximized ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
-              </button>
-
-              <button
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-slate-400 hover:text-slate-200 hover:bg-white/[0.05] rounded-lg transition-colors duration-150 bg-transparent border-none cursor-pointer"
-                onClick={handleCopy}
-                title="Copy code"
-              >
-                {copied ? <Check size={15} /> : <Copy size={15} />}
-              </button>
-            </div>
           </div>
-
-          {/* Code / Preview tabs */}
-          {canPreview && (
-            <div className="flex items-center gap-1 bg-white/[0.04] border border-white/[0.06] p-1 mx-3 my-2 rounded-lg shrink-0">
-              <button
-                onClick={() => setTab("code")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors duration-150 cursor-pointer ${
-                  tab === "code"
-                    ? "bg-indigo-500 text-white"
-                    : "text-slate-500 hover:text-slate-200"
-                }`}
-              >
-                <Code2 size={11} />
-                Code
-              </button>
-
-              <button
-                onClick={() => setTab("preview")}
-                className={`flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors duration-150 cursor-pointer ${
-                  tab === "preview"
-                    ? "bg-indigo-500 text-white"
-                    : "text-slate-500 hover:text-slate-200"
-                }`}
-              >
-                <Eye size={11} />
-                Preview
-              </button>
-            </div>
-          )}
-
-          {tab === "code" && (
-            <div className="flex h-auto border-b border-white/[0.06] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden shrink-0">
-              {files.map((f, index) => (
-                <button
-                  key={index}
-                  onClick={() => setActiveFile(index)}
-                  className={`px-4 py-2.5 text-[11px] font-medium whitespace-nowrap transition-colors duration-150 border-r border-white/[0.05] relative cursor-pointer bg-transparent ${
-                    safeActiveFile === index
-                      ? "text-indigo-400"
-                      : "text-slate-500 hover:text-slate-300"
-                  }`}
-                >
-                  {f?.name}
-
-                  {safeActiveFile === index && (
-                    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-indigo-500 rounded-t-full" />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="flex-1 overflow-hidden">
-            {tab === "preview" && canPreview ? (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="w-full h-full"
-              >
-                <iframe
-                  title="preview"
-                  srcDoc={previewDoc}
-                  sandbox="allow-scripts"
-                  className="w-full h-full bg-white"
-                />
-              </motion.div>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.5 }}
-                className="w-full h-full overflow-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              >
-                <Editor
-                  theme="vs-dark"
-                  language={detectLanguage(file?.name)}
-                  value={file?.content}
-                  options={{
-                    readOnly: true,
-                    minimap: { enabled: false },
-                    fontSize: 13,
-                    wordWrap: "on",
-                    automaticLayout: true,
-                    scrollBeyondLastLine: false,
-                    padding: { top: 16 },
-                    lineNumbers: "on",
-                    renderLineHighlight: "none",
-                  }}
-                />
-              </motion.div>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* Collapsed */
-        <div className="hidden lg:flex h-full bg-[#0d0f14] flex-col items-center py-4 gap-3 shrink-0">
-          <button
-            className="flex items-center justify-center w-7 h-7 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-white/[0.05] transition-colors duration-150 bg-transparent border-none cursor-pointer shrink-0"
-            onClick={() => setCollapsed(false)}
-            title="Expand artifact"
-          >
-            <PanelRightOpen size={16} />
-          </button>
-
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div
-              className="text-[10px] font-medium text-slate-600 tracking-widest uppercase whitespace-nowrap"
-              style={{
-                writingMode: "vertical-lr",
-                transform: "rotate(180deg)",
-              }}
-            >
-              {artifacts[0]?.title}
-            </div>
-          </div>
-        </div>
-      )}
-    </motion.div>
+        )}
+      </motion.div>
+    </>
   );
 }
 
