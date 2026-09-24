@@ -18,9 +18,9 @@ export const login = async (req, res) => {
     if (!user) {
       user = await User.create({
         firebaseUid: decoded.uid,
-        name: decoded.name,
+        name: decoded.name || decoded.email?.split("@")[0] || "User",
         email: decoded.email,
-        avatar: decoded.picture,
+        avatar: decoded.picture || "",
       });
     }
 
@@ -77,14 +77,15 @@ export const login = async (req, res) => {
     res.cookie("session", sessionId, {
       httpOnly: true,
       secure: false,
-      sameSite: "strict",
+      sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
     return res.status(200).json(user);
   } catch (error) {
+    console.error("login error details:", error);
     return res.status(500).json({
-      message: `login error ${error}`,
+      message: `login error ${error.message || error}`,
     });
   }
 };
@@ -192,6 +193,8 @@ export const deductCredits = async (req, res) => {
       pdf: 10,
       ppt: 10,
       vision: 10,
+      imageAnalyzer: 10,
+      pdfRag: 10,
     };
 
     const user = await User.findById(userId);

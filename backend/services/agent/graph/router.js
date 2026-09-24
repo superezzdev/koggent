@@ -1,6 +1,29 @@
 import { getModel } from "../config/llmModels.js";
 
 export const router = async (state) => {
+  const isPdf =
+    state.file?.mimetype === "application/pdf" ||
+    state.file?.mimetype === "application/x-pdf" ||
+    state.file?.originalname?.toLowerCase().endsWith(".pdf");
+
+  if (isPdf) {
+    return {
+      ...state,
+      agent: "pdfRag",
+    };
+  }
+
+  const isImage =
+    state.file?.mimetype?.startsWith("image/") ||
+    /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(state.file?.originalname || "");
+
+  if (isImage) {
+    return {
+      ...state,
+      agent: "imageAnalyzer",
+    };
+  }
+
   if (state.agent && state.agent !== "auto") {
     const rawAgent = String(state.agent).trim().toLowerCase();
     const normalized = rawAgent === "image" ? "vision" : rawAgent;
