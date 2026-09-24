@@ -2,9 +2,20 @@ import { getModel } from "../config/llmModels.js";
 import { generatePdf } from "../utils/generatePDF.js";
 import { getFromS3 } from "../utils/getFromS3.js";
 import { uploadToS3 } from "../utils/uploadToS3.js";
+import { deductCredits } from "../utils/deductCredits.js";
 
 export const pdfAgent = async (state) => {
   try {
+    const creditRes = await deductCredits(state.userId, "pdf");
+    if (!creditRes?.success) {
+      return {
+        ...state,
+        aiResponse: `⚠️ ${creditRes?.message || "Not enough credits."} Please upgrade your plan in Settings & Billing to continue.`,
+        credits: creditRes?.credits ?? state.credits,
+        creditsDeducted: true,
+      };
+    }
+
     const llm = await getModel("pdf");
 
     const prompt = `
@@ -83,6 +94,8 @@ ${state.prompt}
 
 _Link expires in 24 hours._
 `,
+      credits: creditRes.credits,
+      creditsDeducted: true,
     };
   } catch (error) {
     console.log(error);

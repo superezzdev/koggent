@@ -6,6 +6,10 @@ import redis from "../../../shared/redis/redis.js";
 export const agent = async (req, res) => {
   try {
     const { prompt, conversationId, agent } = req.body;
+    const userId =
+      req.headers["x-user-id"] ||
+      req.user?._id?.toString() ||
+      req.user?.userId;
 
     try {
       await redis.del(`messages-${conversationId}`);
@@ -27,6 +31,7 @@ export const agent = async (req, res) => {
       prompt,
       conversationId,
       agent,
+      userId,
     });
 
     const response = result.aiResponse;
@@ -50,6 +55,7 @@ export const agent = async (req, res) => {
       answer: result.aiResponse,
       images: result.images,
       artifacts: result.artifacts,
+      credits: result.credits,
     });
   } catch (error) {
     console.error("agent controller error:", error);

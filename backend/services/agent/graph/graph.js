@@ -17,6 +17,8 @@ workflow.addNode("coding", codingAgent);
 workflow.addNode("pdf", pdfAgent);
 workflow.addNode("ppt", pptAgent);
 workflow.addNode("vision", visionAgent);
+workflow.addNode("pdfRag", pdfRag);
+workflow.addNode("imageAnalyzer", imageAnalyzer);
 
 workflow.addEdge("__start__", "router");
 
@@ -37,6 +39,10 @@ workflow.addConditionalEdges(
       case "vision":
       case "image":
         return "vision";
+      case "pdfRag":
+        return "pdfRag";
+      case "imageAnalyzer":
+        return "imageAnalyzer";
       default:
         return "chat";
     }
@@ -48,6 +54,8 @@ workflow.addConditionalEdges(
     pdf: "pdf",
     ppt: "ppt",
     vision: "vision",
+    pdfRag: "pdfRag",
+    imageAnalyzer: "imageAnalyzer",
   },
 );
 
@@ -57,6 +65,8 @@ workflow.addEdge("coding", "__end__");
 workflow.addEdge("pdf", "__end__");
 workflow.addEdge("ppt", "__end__");
 workflow.addEdge("vision", "__end__");
+workflow.addEdge("pdfRag", "__end__");
+workflow.addEdge("imageAnalyzer", "__end__");
 
 export const graph = workflow.compile();
  

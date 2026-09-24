@@ -5,8 +5,8 @@ async function sendMessage(payload) {
     const { data } = await api.post("/api/agent/chat", payload);
     return data;
   } catch (error) {
-    console.log(error);
-    return null;
+    console.error("sendMessage error:", error);
+    return error.response?.data || null;
   }
 }
 

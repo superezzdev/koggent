@@ -2,9 +2,22 @@ import { getModel } from "../config/llmModels.js";
 import axios from "axios";
 import { uploadToS3 } from "../utils/uploadToS3.js";
 import { getFromS3 } from "../utils/getFromS3.js";
+import { deductCredits } from "../utils/deductCredits.js";
+
 
 export const visionAgent = async (state) => {
   try {
+    const creditRes = await deductCredits(state.userId, "vision");
+    if (!creditRes?.success) {
+      return {
+        ...state,
+        aiResponse: `⚠️ ${creditRes?.message || "Not enough credits."} Please upgrade your plan in Settings & Billing to continue.`,
+        images: [],
+        credits: creditRes?.credits ?? state.credits,
+        creditsDeducted: true,
+      };
+    }
+
     const llm = await getModel("image");
 
     let prompt = state.prompt;
@@ -60,7 +73,6 @@ ${state.prompt}
         "S3 upload or buffer failed, falling back to direct image URL:",
         s3OrFetchError.message,
       );
-      // Fallback: finalUrl remains the working pollinations imageUrl
     }
 
     return {
@@ -73,6 +85,8 @@ ${state.prompt}
 
 ⏳ Link expires in 24 hours.
 `,
+      credits: creditRes.credits,
+      creditsDeducted: true,
     };
   } catch (error) {
     console.error("visionAgent fatal error:", error);

@@ -5,9 +5,27 @@ import {
 } from "@langchain/core/messages";
 import { getModel } from "../config/llmModels.js";
 import { getMemory } from "../config/memory.js";
+import { deductCredits } from "../utils/deductCredits.js";
 
 export const chatAgent = async (state) => {
   try {
+    if (state.aiResponse) {
+      return state;
+    }
+
+    let currentCredits = state.credits;
+    if (!state.creditsDeducted) {
+      const creditRes = await deductCredits(state.userId, "chat");
+      if (!creditRes?.success) {
+        return {
+          ...state,
+          aiResponse: `⚠️ ${creditRes?.message || "Not enough credits."} Please upgrade your plan in Settings & Billing to continue.`,
+          credits: creditRes?.credits ?? state.credits,
+        };
+      }
+      currentCredits = creditRes.credits;
+    }
+
     const llm = await getModel(state.agent || "chat");
 
     const history = (await getMemory(state.conversationId)) || [];
@@ -51,7 +69,6 @@ Formatting:
 
     const messages = [new SystemMessage(systemPrompt)];
 
-    // Avoid duplicating state.prompt if it was already saved in history before invocation
     const lastMsg = history[history.length - 1];
     const historyHasCurrentPrompt =
       lastMsg && lastMsg.role === "user" && lastMsg.content === state.prompt;
@@ -72,13 +89,13 @@ Formatting:
 
     messages.push(new HumanMessage(state.prompt));
 
-    console.log(messages);
-
     const response = await llm.invoke(messages);
 
     return {
       ...state,
       aiResponse: response.content,
+      credits: currentCredits,
+      creditsDeducted: true,
     };
   } catch (error) {
     console.error("chatAgent error:", error);
