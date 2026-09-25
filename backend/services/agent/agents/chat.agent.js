@@ -6,11 +6,16 @@ import {
 import { getModel } from "../config/llmModels.js";
 import { getMemory } from "../config/memory.js";
 import { deductCredits } from "../utils/deductCredits.js";
+import { checkAgentLimit } from "../config/agentLimit.js";
 
 export const chatAgent = async (state) => {
   try {
     if (state.aiResponse) {
       return state;
+    }
+
+    if (!state.creditsDeducted && !state.searchResults) {
+      await checkAgentLimit(state.userId, state.agent || "chat");
     }
 
     let currentCredits = state.credits;
@@ -98,6 +103,9 @@ Formatting:
       creditsDeducted: true,
     };
   } catch (error) {
+    if (error.status === 429) {
+      throw error;
+    }
     console.error("chatAgent error:", error);
     return {
       ...state,

@@ -10,15 +10,17 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use("/", router);
 
-
 app.get("/", (req, res) => {
   res.json({ message: "hello from agent" });
 });
 
 app.use((err, req, res, next) => {
   console.error("agent service error:", err.message);
-  const status = err.status || 400;
-  res.status(status).json({ message: err.message || "An error occurred in agent service" });
+  const status = err.status || 500;
+  res.status(status).json({
+    message: err.data?.message || err.message || "An error occurred in agent service",
+    ...(err.data || {}),
+  });
 });
 
 app.listen(port, () => {

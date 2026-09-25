@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Crown, X, Loader2, Check } from "lucide-react";
 import { useDispatch, useSelector } from "react-redux";
@@ -7,21 +6,33 @@ import { createOrder } from "../features/createOrder";
 import { verifyPayment } from "../features/verifyPayment";
 import getCurrentUser from "../features/getCurrentUser";
 import { setUserdata } from "../redux/userSlice";
+import { loadRazorpay } from "../features/loadRazorpay";
 
 function BillingDrawer({ open, onClose }) {
   const { userData } = useSelector((state) => state.user);
   const dispatch = useDispatch();
   const [loadingPlan, setLoadingPlan] = useState(null);
 
+  useEffect(() => {
+    if (open) {
+      loadRazorpay();
+    }
+  }, [open]);
+
   const handleUpgrade = async (plan) => {
     try {
       if (loadingPlan) return;
-      if (!window.Razorpay) {
-        alert("Razorpay checkout is loading or blocked. Please refresh the page.");
-        return;
-      }
 
       setLoadingPlan(plan);
+
+      if (!window.Razorpay) {
+        const loaded = await loadRazorpay();
+        if (!loaded || !window.Razorpay) {
+          alert("Razorpay checkout is loading or blocked. Please refresh the page.");
+          setLoadingPlan(null);
+          return;
+        }
+      }
       const data = await createOrder(plan);
 
       if (!data?.order?.id) {
