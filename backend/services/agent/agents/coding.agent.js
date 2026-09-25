@@ -4,6 +4,7 @@ import {
   replaceBrokenImages,
 } from "../utils/unsplash.js";
 import { deductCredits } from "../utils/deductCredits.js";
+import { checkAgentLimit } from "../config/agentLimit.js";
 
 
 
@@ -104,6 +105,8 @@ If the latter, redo it.
 `.trim();
 
 export const codingAgent = async (state) => {
+  await checkAgentLimit(state.userId, state.agent || "coding");
+
   const creditRes = await deductCredits(state.userId, "coding");
   if (!creditRes?.success) {
     return {

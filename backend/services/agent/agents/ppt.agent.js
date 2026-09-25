@@ -3,9 +3,12 @@ import { generatePpt } from "../utils/generatePpt.js";
 import { uploadToS3 } from "../utils/uploadToS3.js";
 import { getFromS3 } from "../utils/getFromS3.js";
 import { deductCredits } from "../utils/deductCredits.js";
+import { checkAgentLimit } from "../config/agentLimit.js";
 
 
 export const pptAgent = async (state) => {
+    await checkAgentLimit(state.userId, state.agent || "ppt");
+
   try {
     const creditRes = await deductCredits(state.userId, "ppt");
     if (!creditRes?.success) {
