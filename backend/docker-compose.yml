@@ -1,9 +1,93 @@
 services:
   redis:
-    image: redis
+    image: redis:alpine
     ports:
-      - 6379:6379
+      - "6379:6379"
+
   mongo:
     image: mongo
     ports:
-      - 27017:27017
+      - "27017:27017"
+
+  auth:
+    build:
+      context: .
+      dockerfile: ./services/auth/Dockerfile
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./services/auth/.env
+    environment:
+      - LOCAL_MONGODB_URI=mongodb://mongo:27017/auth
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mongo
+      - redis
+
+  chat:
+    build:
+      context: .
+      dockerfile: ./services/chat/Dockerfile
+    ports:
+      - "8002:8002"
+    env_file:
+      - ./services/chat/.env
+    environment:
+      - LOCAL_MONGODB_URI=mongodb://mongo:27017/chat
+    depends_on:
+      - mongo
+
+  agent:
+    build:
+      context: .
+      dockerfile: ./services/agent/Dockerfile
+    ports:
+      - "8003:8003"
+    env_file:
+      - ./services/agent/.env
+    environment:
+      - LOCAL_MONGODB_URI=mongodb://mongo:27017/agent
+      - REDIS_URL=redis://redis:6379
+      - CHAT_SERVICE=http://chat:8002
+      - AUTH_SERVICE=http://auth:8001
+    depends_on:
+      - mongo
+      - redis
+      - auth
+      - chat
+
+  billing:
+    build:
+      context: .
+      dockerfile: ./services/billing/Dockerfile
+    ports:
+      - "8004:8004"
+    env_file:
+      - ./services/billing/.env
+    environment:
+      - LOCAL_MONGODB_URI=mongodb://mongo:27017/billing
+      - AUTH_SERVICE=http://auth:8001
+    depends_on:
+      - mongo
+      - auth
+
+  gateway:
+    build:
+      context: .
+      dockerfile: ./gateway/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./gateway/.env
+    environment:
+      - AUTH_SERVICE=http://auth:8001
+      - CHAT_SERVICE=http://chat:8002
+      - AGENT_SERVICE=http://agent:8003
+      - BILLING_SERVICE=http://billing:8004
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - auth
+      - chat
+      - agent
+      - billing
+      - redis

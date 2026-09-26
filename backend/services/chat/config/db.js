@@ -15,7 +15,9 @@ export const connectDb = async () => {
     try {
       await mongoose.disconnect();
       console.log("Attempting fallback to local MongoDB...");
-      await mongoose.connect("mongodb://127.0.0.1:27017/chat", {
+      await mongoose.connect(
+        process.env.LOCAL_MONGODB_URI || "mongodb://127.0.0.1:27017/chat",
+        {
         serverSelectionTimeoutMS: 2000,
         connectTimeoutMS: 2000,
       });

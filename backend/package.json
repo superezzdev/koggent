@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "node run-all.js",
     "start": "node run-all.js",
+    "build:ecs": "./build-and-push.sh --build-only",
+    "deploy:ecs": "./build-and-push.sh --deploy",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
