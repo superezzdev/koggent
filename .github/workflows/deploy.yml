@@ -1,0 +1,87 @@
+name: koggent deployment
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION || 'us-east-1' }}
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  ECS_CLUSTER: ${{ secrets.ECS_CLUSTER || 'koggent-backend' }}
+
+jobs:
+  deploy-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID || secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # --- 1. Gateway ---
+      - name: Build and Push Gateway
+        run: |
+          docker build --platform linux/amd64 \
+            -f backend/gateway/Dockerfile \
+            -t ${{ steps.login-ecr.outputs.registry }}/gateway:latest \
+            backend
+          docker push ${{ steps.login-ecr.outputs.registry }}/gateway:latest
+
+      # --- 2. Auth Service ---
+      - name: Build and Push Auth Service
+        run: |
+          docker build --platform linux/amd64 \
+            -f backend/services/auth/Dockerfile \
+            -t ${{ steps.login-ecr.outputs.registry }}/auth-service:latest \
+            backend
+          docker push ${{ steps.login-ecr.outputs.registry }}/auth-service:latest
+
+      # --- 3. Chat Service ---
+      - name: Build and Push Chat Service
+        run: |
+          docker build --platform linux/amd64 \
+            -f backend/services/chat/Dockerfile \
+            -t ${{ steps.login-ecr.outputs.registry }}/chat-service:latest \
+            backend
+          docker push ${{ steps.login-ecr.outputs.registry }}/chat-service:latest
+
+      # --- 4. Agent Service ---
+      - name: Build and Push Agent Service
+        run: |
+          docker build --platform linux/amd64 \
+            -f backend/services/agent/Dockerfile \
+            -t ${{ steps.login-ecr.outputs.registry }}/agent-service:latest \
+            backend
+          docker push ${{ steps.login-ecr.outputs.registry }}/agent-service:latest
+
+      # --- 5. Billing Service ---
+      - name: Build and Push Billing Service
+        run: |
+          docker build --platform linux/amd64 \
+            -f backend/services/billing/Dockerfile \
+            -t ${{ steps.login-ecr.outputs.registry }}/billing-service:latest \
+            backend
+          docker push ${{ steps.login-ecr.outputs.registry }}/billing-service:latest
+
+      # --- ECS Deployments ---
+      - name: Deploy Services to ECS
+        run: |
+          aws ecs update-service --cluster $ECS_CLUSTER --service ${{ secrets.GATEWAY_SERVICE || 'gateway-service' }} --force-new-deployment
+          aws ecs update-service --cluster $ECS_CLUSTER --service ${{ secrets.AUTH_SERVICE || 'auth-service' }} --force-new-deployment
+          aws ecs update-service --cluster $ECS_CLUSTER --service ${{ secrets.CHAT_SERVICE || 'chat-service' }} --force-new-deployment
+          aws ecs update-service --cluster $ECS_CLUSTER --service ${{ secrets.AGENT_SERVICE || 'agent-service' }} --force-new-deployment
+          aws ecs update-service --cluster $ECS_CLUSTER --service ${{ secrets.BILLING_SERVICE || 'billing-service' }} --force-new-deployment
