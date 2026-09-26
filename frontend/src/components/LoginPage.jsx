@@ -89,10 +89,11 @@ export default function LoginPage() {
       } else if (err.code === "auth/network-request-failed") {
         setError("Network connection error. Please check your connectivity.");
       } else {
-        setError(
+        const errorMsg =
+          err.response?.data?.message ||
           err.message?.replace("Firebase: ", "") ||
-            "Failed to sign in with Google. Please try again."
-        );
+          "Failed to sign in with Google. Please try again.";
+        setError(errorMsg);
       }
     } finally {
       setIsGoogleLoading(false);
