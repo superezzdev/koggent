@@ -1,5 +1,6 @@
 import {
   Mic,
+  MicOff,
   Paperclip,
   Send,
   Loader2,
@@ -29,12 +30,170 @@ function ChatInput() {
   const [value, setValue] = useState("");
   const [selectedAgent, setSelectedAgent] = useState("auto");
   const [loading, setLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [speechError, setSpeechError] = useState(null);
 
   const { selectedConversation } = useSelector((state) => state.conversation);
   const { userData } = useSelector((state) => state.user);
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileRef = useRef(null);
+  const textareaRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const isListeningRef = useRef(false);
+  const baseTextRef = useRef("");
+  const errorTimeoutRef = useRef(null);
+
+  const isSpeechSupported =
+    typeof window !== "undefined" &&
+    Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  const showError = (msg) => {
+    setSpeechError(msg);
+    if (errorTimeoutRef.current) {
+      clearTimeout(errorTimeoutRef.current);
+    }
+    errorTimeoutRef.current = setTimeout(() => {
+      setSpeechError(null);
+    }, 5000);
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // Recognition already stopped
+      }
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+    isListeningRef.current = false;
+  };
+
+  const startListening = () => {
+    if (!isSpeechSupported) {
+      showError(
+        "Speech recognition is not supported in this browser. Try Chrome, Edge, or Safari."
+      );
+      return;
+    }
+
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch {
+        // Previous instance abort
+      }
+      recognitionRef.current = null;
+    }
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    try {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang =
+        (typeof navigator !== "undefined" && navigator.language) || "en-US";
+
+      baseTextRef.current = value;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        isListeningRef.current = true;
+        setSpeechError(null);
+      };
+
+      recognition.onresult = (event) => {
+        let transcript = "";
+        for (let i = 0; i < event.results.length; i++) {
+          const part = event.results[i][0]?.transcript || "";
+          if (transcript && !transcript.endsWith(" ") && !part.startsWith(" ")) {
+            transcript += " " + part;
+          } else {
+            transcript += part;
+          }
+        }
+        transcript = transcript.trim();
+
+        const base = baseTextRef.current;
+        if (base) {
+          const needsSpace =
+            !base.endsWith(" ") && !base.endsWith("\n") && transcript.length > 0;
+          setValue(`${base}${needsSpace ? " " : ""}${transcript}`);
+        } else {
+          setValue(transcript);
+        }
+
+        if (textareaRef.current) {
+          textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.warn("Speech recognition error:", event.error);
+        if (
+          event.error === "not-allowed" ||
+          event.error === "service-not-allowed"
+        ) {
+          showError("Microphone access denied. Please allow microphone permissions.");
+          stopListening();
+        } else if (event.error === "audio-capture") {
+          showError("No microphone detected. Please check your audio settings.");
+          stopListening();
+        } else if (event.error === "network") {
+          showError("Network error during speech recognition. Please try again.");
+          stopListening();
+        } else if (event.error !== "no-speech") {
+          showError(`Speech recognition error: ${event.error}`);
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        isListeningRef.current = false;
+        recognitionRef.current = null;
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+      setIsListening(true);
+      isListeningRef.current = true;
+      textareaRef.current?.focus();
+    } catch (err) {
+      console.error("Failed to start speech recognition:", err);
+      setIsListening(false);
+      isListeningRef.current = false;
+      recognitionRef.current = null;
+      showError("Unable to access microphone. Please try again.");
+    }
+  };
+
+  const toggleListening = () => {
+    if (loading) return;
+    if (isListeningRef.current) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch {
+          // Unmount cleanup
+        }
+      }
+      if (errorTimeoutRef.current) {
+        clearTimeout(errorTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleClearFile = () => {
     if (previewUrl) {
@@ -78,9 +237,13 @@ function ChatInput() {
   const dispatch = useDispatch();
 
   const handleSendMessage = async () => {
+    if (isListeningRef.current) {
+      stopListening();
+    }
     const trimmed = value.trim();
     if ((!trimmed && !selectedFile) || loading) return;
 
+    baseTextRef.current = "";
     dispatch(setIsLoading(true));
     setLoading(true);
     setValue("");
@@ -303,7 +466,8 @@ function ChatInput() {
         )}
 
         <textarea
-          placeholder="Ask Anything..."
+          ref={textareaRef}
+          placeholder={isListening ? "Listening... Speak now..." : "Ask Anything..."}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           value={value}
@@ -312,8 +476,21 @@ function ChatInput() {
           rows={3}
         />
 
+        {speechError && (
+          <div className="flex items-center justify-between gap-2 px-3 py-1.5 mb-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300">
+            <span className="truncate">{speechError}</span>
+            <button
+              type="button"
+              onClick={() => setSpeechError(null)}
+              className="text-amber-400 hover:text-white p-0.5 rounded cursor-pointer"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <input
               type="file"
               accept=".pdf,image/*"
@@ -337,10 +514,42 @@ function ChatInput() {
 
             <button
               type="button"
-              className="flex items-center justify-center w-8 h-8 rounded-lg text-slate-600 hover:text-slate-400 hover:bg-white/[0.05] border border-transparent hover:border-white/[0.06] transition-all duration-150 bg-transparent cursor-pointer"
+              onClick={toggleListening}
+              disabled={loading}
+              title={
+                !isSpeechSupported
+                  ? "Speech recognition is not supported in this browser"
+                  : isListening
+                  ? "Stop listening"
+                  : "Voice typing"
+              }
+              className={`flex items-center justify-center w-8 h-8 rounded-lg border transition-all duration-150 cursor-pointer ${
+                isListening
+                  ? "bg-rose-500/20 text-rose-400 border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.35)]"
+                  : "text-slate-600 hover:text-slate-400 hover:bg-white/[0.05] border-transparent hover:border-white/[0.06] bg-transparent"
+              } ${loading ? "opacity-40 cursor-not-allowed" : ""}`}
             >
-              <Mic size={16} />
+              {isListening ? (
+                <MicOff size={16} className="text-rose-400 animate-pulse" />
+              ) : (
+                <Mic size={16} />
+              )}
             </button>
+
+            {isListening && (
+              <div className="flex items-center gap-2 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/25 text-[11px] font-medium text-rose-300 shadow-sm animate-pulse">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                </span>
+                <span className="hidden sm:inline">Listening...</span>
+                <div className="flex items-center gap-0.5">
+                  <span className="w-0.5 h-2.5 bg-rose-400 rounded-full animate-pulse"></span>
+                  <span className="w-0.5 h-4 bg-rose-400 rounded-full animate-pulse"></span>
+                  <span className="w-0.5 h-2 bg-rose-400 rounded-full animate-pulse"></span>
+                </div>
+              </div>
+            )}
           </div>
 
           <button
