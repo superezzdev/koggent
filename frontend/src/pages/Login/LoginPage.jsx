@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { setUserdata } from "../redux/userSlice";
-import api from "../../utils/axios";
-import { auth, googleProvider } from "../../utils/firebase";
+import { setUserdata } from "../../redux/userSlice";
+import api from "../../../utils/axios";
+import { auth, googleProvider } from "../../../utils/firebase";
 import {
   signInWithPopup,
   signInWithEmailAndPassword,
@@ -22,9 +22,9 @@ import {
   Lock,
   Info,
 } from "lucide-react";
-import koggentLogo from "../assets/koggent-logo.png";
+import koggentLogo from "../../assets/brand/koggent-logo.png";
 
-export default function LoginPage() {
+export default function LoginPage({ onBack }) {
   const dispatch = useDispatch();
 
   // Form states
@@ -229,15 +229,27 @@ export default function LoginPage() {
           className="w-full lg:w-1/2 flex flex-col justify-center max-w-[390px] mx-auto lg:mx-0 my-auto py-6"
         >
           {/* Koggent Brand Header */}
-          <div className="flex items-center gap-3 mb-8 sm:mb-10">
-            <img
-              src={koggentLogo}
-              alt="Koggent Logo"
-              className="w-10 h-10 object-contain select-none"
-            />
-            <span className="text-xl font-bold tracking-tight text-white">
-              Koggent
-            </span>
+          <div className="flex items-center justify-between gap-3 mb-8 sm:mb-10">
+            <div className="flex items-center gap-3">
+              <img
+                src={koggentLogo}
+                alt="Koggent Logo"
+                className="w-10 h-10 object-contain select-none"
+              />
+              <span className="text-xl font-bold tracking-tight text-white">
+                Koggent
+              </span>
+            </div>
+
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="text-xs text-zinc-400 hover:text-white transition-colors cursor-pointer px-3 py-1.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08]"
+              >
+                ← Back to Overview
+              </button>
+            )}
           </div>
 
           {/* Heading */}

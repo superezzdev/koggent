@@ -3,7 +3,7 @@ import Home from "./pages/Home";
 import getCurrentUser from "./features/getCurrentUser";
 import { useDispatch } from "react-redux";
 import { setUserdata } from "./redux/userSlice";
-import koggentLogo from "./assets/koggent-logo.png";
+import koggentLogo from "./assets/brand/koggent-logo.png";
 
 function App() {
   const dispatch = useDispatch();

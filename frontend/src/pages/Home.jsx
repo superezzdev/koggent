@@ -1,14 +1,20 @@
+import { useState } from "react";
 import { useSelector } from "react-redux";
 import SideBar from "../components/SideBar";
 import ChatArea from "../components/ChatArea";
 import Artifact from "../components/Artifact";
-import LoginPage from "../components/LoginPage";
+import LoginPage from "./Login/LoginPage";
+import LandingPage from "./Landing/LandingPage";
 
 function Home() {
   const { userData } = useSelector((state) => state.user);
+  const [showAuth, setShowAuth] = useState(false);
 
   if (!userData) {
-    return <LoginPage />;
+    if (showAuth) {
+      return <LoginPage onBack={() => setShowAuth(false)} />;
+    }
+    return <LandingPage onOpenAuth={() => setShowAuth(true)} />;
   }
 
   return (
