@@ -42,6 +42,13 @@ jobs:
           docker push ${{ steps.login-ecr.outputs.registry }}/gateway:latest
 
       # --- 2. Auth Service ---
+      - name: Setup Firebase Service Account
+        if: ${{ env.FIREBASE_SERVICE_ACCOUNT != '' }}
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > backend/services/auth/serviceAccountKey.json
+
       - name: Build and Push Auth Service
         run: |
           docker build --platform linux/amd64 \
